@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://cax2obby"]
 
-[ext_resource type="Script" path="res://scenes/ui/lobby.gd" id="1_lobby"]
+[ext_resource type="Script" uid="uid://tlr6dxrrmxqe" path="res://scenes/ui/lobby.gd" id="1_lobby"]
 
 [node name="Lobby" type="CanvasLayer"]
 script = ExtResource("1_lobby")
@@ -31,7 +31,7 @@ theme_override_constants/separation = 20
 [node name="Title" type="Label" parent="ColorRect/VBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 40
-text = "HEIGHT RACE"
+text = "BUILD & BLESS"
 horizontal_alignment = 1
 
 [node name="WaitingLabel" type="Label" parent="ColorRect/VBoxContainer"]
