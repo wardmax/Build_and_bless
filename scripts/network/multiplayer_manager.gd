@@ -11,7 +11,7 @@ var is_match_started = false
 
 # ── Match Timer ──────────────────────────────────────────────────
 # Edit this value to change the match length (in seconds)
-const MATCH_DURATION: float = 30.0  # 5:00
+const MATCH_DURATION: float = 180.0  # 5:00
 var _time_remaining: float = MATCH_DURATION
 var _timer_sync_accum: float = 0.0  # Only broadcast timer every second
 
