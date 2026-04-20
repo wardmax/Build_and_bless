@@ -355,6 +355,10 @@ func shoot():
 			if target and target.has_method("take_damage"):
 				var shooter = multiplayer.get_remote_sender_id()
 				var body_part = ["head","body"][ray.get_collider_shape()]
+				
+				var auth_id = get_multiplayer_authority()
+				notify_hit_marker.rpc_id(auth_id)
+				
 				if(body_part == "head"):
 					target.take_damage(100, shooter) #headshot
 				else:
@@ -574,3 +578,10 @@ func respawn(spawn_pos: Vector3):
 		global_position = result.position + Vector3(0, 1.0, 0)
 	else:
 		global_position = spawn_pos
+
+@rpc("any_peer", "call_local")
+func notify_hit_marker():
+	if has_node("Control") and $Control.has_method("register_hit"):
+		$Control.register_hit()
+	if has_node("SoundFX/hitFX"):
+		$SoundFX/hitFX.play()

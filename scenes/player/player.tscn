@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=4 uid="uid://xjygpllvas2q"]
+[gd_scene load_steps=20 format=4 uid="uid://xjygpllvas2q"]
 
 [ext_resource type="Script" uid="uid://s4je8q1h3ruf" path="res://scenes/player/player.gd" id="1_dovo2"]
 [ext_resource type="Script" uid="uid://d3jltjgdfqhco" path="res://scenes/player/skeleton_3d_2.gd" id="2_5gtgg"]
@@ -9,6 +9,7 @@
 [ext_resource type="AudioStream" uid="uid://cnlkhoaxvw545" path="res://asssets/Audio/gun_rifle_cock_01.wav" id="5_0owmy"]
 [ext_resource type="AudioStream" uid="uid://bddmswgsnuglu" path="res://asssets/Audio/gun_rifle_dry_fire_01.wav" id="6_qek5x"]
 [ext_resource type="Script" uid="uid://cdte2ipf7gfvb" path="res://scenes/player/control.gd" id="7_0owmy"]
+[ext_resource type="AudioStream" uid="uid://cn23y3n11ifnv" path="res://asssets/Audio/snowball_hit_impact_10.wav" id="9_h17s1"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dvy3f"]
 resource_name = "Ch36_Body"
@@ -1820,6 +1821,9 @@ volume_db = -15.0
 [node name="dryfireFX" type="AudioStreamPlayer3D" parent="SoundFX"]
 stream = ExtResource("6_qek5x")
 volume_db = -15.0
+
+[node name="hitFX" type="AudioStreamPlayer3D" parent="SoundFX"]
+stream = ExtResource("9_h17s1")
 
 [node name="Control" type="Control" parent="."]
 layout_mode = 3

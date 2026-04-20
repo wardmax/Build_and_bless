@@ -51,3 +51,5 @@ target_position = Vector3(0, -500, 0)
 libraries = {
 &"": SubResource("AnimationLibrary_gun")
 }
+
+[editable path="ak47"]
