@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://cu1two4nu32kw"]
+
+[ext_resource type="Script" uid="uid://b3lby1t6cr5iu" path="res://scripts/Item Data/item_data.gd" id="1_0o7uh"]
+[ext_resource type="Texture2D" uid="uid://dlrglud55ns7b" path="res://scripts/Item Data/Item_Icons/footbomb.png" id="1_wjcd3"]
+
+[resource]
+script = ExtResource("1_0o7uh")
+item_name = "Footbomb"
+icon = ExtResource("1_wjcd3")
+category = 1
+metadata/_custom_type_script = "uid://b3lby1t6cr5iu"

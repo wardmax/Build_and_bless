@@ -1,0 +1,127 @@
+[gd_scene load_steps=2 format=3 uid="uid://51vflldx3b1j"]
+
+[ext_resource type="Script" uid="uid://cx5svdmpossds" path="res://scripts/Item Data/inventory_manager.gd" id="1_inv"]
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_inv"]
+properties/0/path = NodePath(".:sync_current_cat")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+properties/1/path = NodePath(".:sync_weapon_idx")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+properties/2/path = NodePath(".:sync_grenade_idx")
+properties/2/spawn = true
+properties/2/replication_mode = 1
+properties/3/path = NodePath(".:sync_tool_idx")
+properties/3/spawn = true
+properties/3/replication_mode = 1
+
+[node name="InventoryManager" type="Node"]
+script = ExtResource("1_inv")
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+replication_config = SubResource("SceneReplicationConfig_inv")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="HotbarController" type="Control" parent="HUD"]
+layout_mode = 3
+anchor_left = 0.02
+anchor_top = 0.95
+anchor_right = 0.020000001
+anchor_bottom = 1.0
+offset_top = -107.664
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="CategoryHBox" type="HBoxContainer" parent="HUD/HotbarController"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Category1_Weapons" type="VBoxContainer" parent="HUD/HotbarController/CategoryHBox"]
+layout_mode = 2
+
+[node name="previous_weapon" type="PanelContainer" parent="HUD/HotbarController/CategoryHBox/Category1_Weapons"]
+self_modulate = Color(1, 1, 1, 0.4)
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="HUD/HotbarController/CategoryHBox/Category1_Weapons/previous_weapon"]
+layout_mode = 2
+expand_mode = 1
+
+[node name="active_weapon" type="PanelContainer" parent="HUD/HotbarController/CategoryHBox/Category1_Weapons"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="HUD/HotbarController/CategoryHBox/Category1_Weapons/active_weapon"]
+layout_mode = 2
+expand_mode = 1
+
+[node name="next_weapon" type="PanelContainer" parent="HUD/HotbarController/CategoryHBox/Category1_Weapons"]
+self_modulate = Color(1, 1, 1, 0.4)
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="HUD/HotbarController/CategoryHBox/Category1_Weapons/next_weapon"]
+layout_mode = 2
+expand_mode = 1
+
+[node name="Category2_Throwable" type="VBoxContainer" parent="HUD/HotbarController/CategoryHBox"]
+layout_mode = 2
+
+[node name="previous_throwable" type="PanelContainer" parent="HUD/HotbarController/CategoryHBox/Category2_Throwable"]
+self_modulate = Color(1, 1, 1, 0.4)
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="HUD/HotbarController/CategoryHBox/Category2_Throwable/previous_throwable"]
+layout_mode = 2
+expand_mode = 1
+
+[node name="active_throwable" type="PanelContainer" parent="HUD/HotbarController/CategoryHBox/Category2_Throwable"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="HUD/HotbarController/CategoryHBox/Category2_Throwable/active_throwable"]
+layout_mode = 2
+expand_mode = 1
+
+[node name="next_throwable" type="PanelContainer" parent="HUD/HotbarController/CategoryHBox/Category2_Throwable"]
+self_modulate = Color(1, 1, 1, 0.4)
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="HUD/HotbarController/CategoryHBox/Category2_Throwable/next_throwable"]
+layout_mode = 2
+expand_mode = 1
+
+[node name="Category3_Tools" type="VBoxContainer" parent="HUD/HotbarController/CategoryHBox"]
+layout_mode = 2
+
+[node name="previous_tool" type="PanelContainer" parent="HUD/HotbarController/CategoryHBox/Category3_Tools"]
+self_modulate = Color(1, 1, 1, 0.4)
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="HUD/HotbarController/CategoryHBox/Category3_Tools/previous_tool"]
+layout_mode = 2
+expand_mode = 1
+
+[node name="active_tool" type="PanelContainer" parent="HUD/HotbarController/CategoryHBox/Category3_Tools"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="HUD/HotbarController/CategoryHBox/Category3_Tools/active_tool"]
+layout_mode = 2
+expand_mode = 1
+
+[node name="next_tool" type="PanelContainer" parent="HUD/HotbarController/CategoryHBox/Category3_Tools"]
+self_modulate = Color(1, 1, 1, 0.4)
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="HUD/HotbarController/CategoryHBox/Category3_Tools/next_tool"]
+layout_mode = 2
+expand_mode = 1

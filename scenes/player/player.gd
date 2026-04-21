@@ -9,19 +9,17 @@ extends CharacterBody3D
 @export var FIRE_RATE = .2
 @export var MAX_AMMO = 20
 @export var RELOAD_TIME = 2.0
-@export var BULLET_SPREAD = 3 # Spread amount at the raycast's max distance
+@export var BULLET_SPREAD = 2 # Spread amount at the raycast's max distance
 
-enum Weapon { GUN, THROWABLE, SHOVEL }
-var current_weapon = Weapon.GUN
-
-var equipped_throwable_scene = "res://scenes/player/footbomb.tscn"
+var current_item_data: ItemData
 var is_priming_throw: bool = false
 var primed_throw_force: float = 15.0
-
 var current_ammo = 20
 var collected_blocks = 0
 var time_since_last_shot = 0.0
 var is_reloading = false
+
+@onready var inventory_manager = $InventoryManager
 
 var trajectory_multimesh := MultiMeshInstance3D.new()
 var charge_start_time: float = 0.0
@@ -83,6 +81,8 @@ func _setup_authority():
 		$MultiplayerSynchronizer.set_multiplayer_authority(id)
 		
 	if is_multiplayer_authority():
+		$HealthBar/ProgressBar.value=health
+		$HealthBar.show() # Only I see my bar
 		var mm = get_tree().root.find_child("MultiplayerManager", true, false)
 		if mm and not mm.is_match_started:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -96,9 +96,14 @@ func _setup_authority():
 		if not multiplayer.is_server():
 			request_spawn_point.rpc_id(1)
 		
-		# Set initial weapon models
-		set_weapon(Weapon.GUN)
+		# Inventory setup
+		inventory_manager.item_equipped.connect(_on_item_equipped)
+	elif multiplayer.is_server():
+		$HealthBar.hide() # Only I see my bar
+		# Server needs to keep track of all players' items to validate shooting/actions
+		inventory_manager.item_equipped.connect(_on_item_equipped)
 	else:
+		$HealthBar.hide() # Only I see my bar
 		if has_node("Camera3D"):
 			$Camera3D.current = false
 
@@ -129,8 +134,25 @@ func _unhandled_input(event):
 		else:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
-@export var health = 100
+	# Scrolling for inventory
+	if event is InputEventMouseButton:
+		if event.is_pressed():
+			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+				inventory_manager.cycle_item(-1)
+			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+				inventory_manager.cycle_item(1)
 
+@export var health = 100:
+	set(v):
+		health = v
+		# Update the UI if it exists	
+		if has_node("HealthBar/ProgressBar"):
+			$HealthBar/ProgressBar.value = v
+
+@rpc("any_peer", "call_local")
+func update_health(new_health):
+	health = new_health
+			
 func _physics_process(delta: float) -> void:
 	# Only handle input for the local player
 	if not is_multiplayer_authority():
@@ -171,13 +193,13 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
-	# Weapon Switching
+	# Weapon Category Switching
 	if Input.is_physical_key_pressed(KEY_1):
-		set_weapon(Weapon.THROWABLE)
+		inventory_manager.change_category(0) # Weapons
 	elif Input.is_physical_key_pressed(KEY_2):
-		set_weapon(Weapon.GUN)
+		inventory_manager.change_category(1) # Grenades
 	elif Input.is_physical_key_pressed(KEY_3):
-		set_weapon(Weapon.SHOVEL)
+		inventory_manager.change_category(2) # Tools
 
 	# 4. Scoreboard Toggling
 	if Input.is_physical_key_pressed(KEY_TAB):
@@ -208,11 +230,11 @@ func _physics_process(delta: float) -> void:
 		$Camera3D/gun.rotation = gun_base_rotation + gun_recoil_rotation
 	
 	if Input.is_action_just_pressed("reload") or Input.is_physical_key_pressed(KEY_R):
-		if current_ammo < MAX_AMMO and not is_reloading and current_weapon == Weapon.GUN:
+		if current_ammo < MAX_AMMO and not is_reloading and current_item_data and current_item_data.category == ItemData.ItemCategory.WEAPON:
 			$SoundFX/reloadFX.play()
 			reload_weapon()
 			
-	if current_weapon == Weapon.THROWABLE:
+	if current_item_data and current_item_data.category == ItemData.ItemCategory.GRENADE:
 		var holding_left = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_action_pressed("shoot")
 		
 		# Start priming throw
@@ -230,9 +252,9 @@ func _physics_process(delta: float) -> void:
 				# Let go -> throw it!
 				is_priming_throw = false
 				trajectory_multimesh.visible = false
-				request_spawn_throwable.rpc_id(1, equipped_throwable_scene, get_node("Camera3D/gun/Muzzle").global_position, -$Camera3D.global_transform.basis.z * primed_throw_force)
-				set_weapon(Weapon.GUN)
-	elif current_weapon == Weapon.SHOVEL:
+				var scene_path = current_item_data.item_scene.resource_path if current_item_data.item_scene else "res://scenes/player/footbomb.tscn"
+				request_spawn_throwable.rpc_id(1, scene_path, get_node("Camera3D/gun/Muzzle").global_position, -$Camera3D.global_transform.basis.z * primed_throw_force)
+	elif current_item_data and current_item_data.category == ItemData.ItemCategory.TOOL:
 		if time_since_last_shot >= 0.5: # Dig/place cooldown
 			if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_action_pressed("shoot"):
 				time_since_last_shot = 0.0
@@ -529,23 +551,26 @@ func request_spawn_point():
 			var pos = mm.get_spawn_pos(multiplayer.get_remote_sender_id())
 			respawn.rpc_id(multiplayer.get_remote_sender_id(), pos)
 
-func set_weapon(w: Weapon):
-	current_weapon = w
+func _on_item_equipped(item_data: ItemData):
+	current_item_data = item_data
 	is_priming_throw = false
 	trajectory_multimesh.visible = false
 	update_weapon_mesh()
-	
+
 func update_weapon_mesh():
 	var w_gun = get_node_or_null("Camera3D/gun")
 	var w_shovel = get_node_or_null("Camera3D/Shovel")
 	var w_bomb = get_node_or_null("Camera3D/Bomb")
 	
-	if w_gun: w_gun.visible = (current_weapon == Weapon.GUN)
-	if w_shovel: w_shovel.visible = (current_weapon == Weapon.SHOVEL)
-	if w_bomb: w_bomb.visible = (current_weapon == Weapon.THROWABLE)
+	if current_item_data == null: return
+	
+	if w_gun: w_gun.visible = (current_item_data.category == ItemData.ItemCategory.WEAPON)
+	if w_shovel: w_shovel.visible = (current_item_data.category == ItemData.ItemCategory.TOOL)
+	if w_bomb: w_bomb.visible = (current_item_data.category == ItemData.ItemCategory.GRENADE)
 
 func take_damage(amount, shooter_id=0):
 	health -= amount
+	update_health.rpc_id(str(name).to_int(), health) 
 	print("Player took damage! Health: ", health)
 	if health <= 0:
 		die(shooter_id)
