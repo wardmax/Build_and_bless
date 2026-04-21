@@ -1,6 +1,8 @@
 extends Control
 
 var _t = 0.0 # Time remaining for hit indicator
+var cross_hair_length = 8
+var cross_hair_thickness = 1
 
 # Call this when an enemy is hit
 func register_hit():
@@ -17,8 +19,8 @@ func _draw():
 		draw_line(center + Vector2(4,-4), center + Vector2(-4,4), color, 2)
 		
 	# Draw Crosshair
-	draw_line(center + Vector2(-10,0), center + Vector2(10,0), color, 2)
-	draw_line(center + Vector2(0,-10), center + Vector2(0,10), color, 2)
+	draw_line(center + Vector2(-cross_hair_length,0), center + Vector2(cross_hair_length,0), color, cross_hair_thickness)
+	draw_line(center + Vector2(0,-cross_hair_length), center + Vector2(0,cross_hair_length), color, cross_hair_thickness)
 
 func _process(delta):
 	if _t > 0.0:

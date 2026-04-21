@@ -18,6 +18,7 @@ var current_ammo = 20
 var collected_blocks = 0
 var time_since_last_shot = 0.0
 var is_reloading = false
+var dig_place_cooldown = 0.2
 
 @onready var inventory_manager = $InventoryManager
 
@@ -255,7 +256,7 @@ func _physics_process(delta: float) -> void:
 				var scene_path = current_item_data.item_scene.resource_path if current_item_data.item_scene else "res://scenes/player/footbomb.tscn"
 				request_spawn_throwable.rpc_id(1, scene_path, get_node("Camera3D/gun/Muzzle").global_position, -$Camera3D.global_transform.basis.z * primed_throw_force)
 	elif current_item_data and current_item_data.category == ItemData.ItemCategory.TOOL:
-		if time_since_last_shot >= 0.5: # Dig/place cooldown
+		if time_since_last_shot >= dig_place_cooldown: # Dig/place cooldown
 			if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_action_pressed("shoot"):
 				time_since_last_shot = 0.0
 				shovel_action.rpc_id(1, true)
