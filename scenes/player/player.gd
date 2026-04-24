@@ -536,7 +536,6 @@ func shovel_action(is_digging: bool):
 			collected_blocks += 1
 		else:
 			collected_blocks -= 1
-		print(collected_blocks)
 		update_collected_blocks.rpc_id(str(name).to_int(), collected_blocks)
 		dig_sphere_synced.rpc(target.get_path(), world_pos, is_digging)
 

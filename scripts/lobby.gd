@@ -31,6 +31,8 @@ func _ready():
 		start_btn.hide()
 		progress_bar.hide()
 		waiting_label.text = "Waiting for Host..."
+
+			
 		
 	if NetworkManager.active_host_ip != "":
 		ip_label.text = "IP: " + NetworkManager.active_host_ip
