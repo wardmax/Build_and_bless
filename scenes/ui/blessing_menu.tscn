@@ -1,0 +1,77 @@
+[gd_scene format=3 uid="uid://tq158q0u0mp3"]
+
+[node name="blessing_menu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="Panel" type="Panel" parent="VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Panel2" type="Panel" parent="VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Panel3" type="Panel" parent="VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="HScrollBar" type="HScrollBar" parent="VBoxContainer"]
+custom_minimum_size = Vector2(128, 32)
+layout_mode = 2
+max_value = 10.0
+step = 1.0
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="Panel" type="Panel" parent="VBoxContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Panel2" type="Panel" parent="VBoxContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Panel3" type="Panel" parent="VBoxContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="HScrollBar2" type="HScrollBar" parent="VBoxContainer"]
+custom_minimum_size = Vector2(128, 32)
+layout_mode = 2
+max_value = 10.0
+step = 1.0
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="Panel" type="Panel" parent="VBoxContainer/HBoxContainer3"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Panel2" type="Panel" parent="VBoxContainer/HBoxContainer3"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Panel3" type="Panel" parent="VBoxContainer/HBoxContainer3"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="HScrollBar3" type="HScrollBar" parent="VBoxContainer"]
+custom_minimum_size = Vector2(128, 32)
+layout_mode = 2
+max_value = 10.0
+step = 1.0

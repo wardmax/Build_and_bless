@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://sb2x1"]
 
-[ext_resource type="Script" path="res://scenes/ui/scoreboard.gd" id="1_bd123"]
+[ext_resource type="Script" uid="uid://dnjdevc8gcm3i" path="res://scripts/scoreboard.gd" id="1_bd123"]
 
 [node name="Scoreboard" type="CanvasLayer"]
 visible = false

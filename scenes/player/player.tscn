@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=4 uid="uid://xjygpllvas2q"]
+[gd_scene load_steps=20 format=4 uid="uid://xjygpllvas2q"]
 
 [ext_resource type="Script" uid="uid://s4je8q1h3ruf" path="res://scenes/player/player.gd" id="1_dovo2"]
 [ext_resource type="Script" uid="uid://d3jltjgdfqhco" path="res://scenes/player/skeleton_3d_2.gd" id="2_5gtgg"]
@@ -8,7 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://ykm1jmao0cmp" path="res://asssets/Model/Ch36_nonPBR_3.png" id="4_je7p5"]
 [ext_resource type="AudioStream" uid="uid://cnlkhoaxvw545" path="res://asssets/Audio/gun_rifle_cock_01.wav" id="5_0owmy"]
 [ext_resource type="AudioStream" uid="uid://bddmswgsnuglu" path="res://asssets/Audio/gun_rifle_dry_fire_01.wav" id="6_qek5x"]
-[ext_resource type="Script" uid="uid://cdte2ipf7gfvb" path="res://scenes/player/control.gd" id="7_0owmy"]
+[ext_resource type="Script" uid="uid://cdte2ipf7gfvb" path="res://scenes/player/cross_hair.gd" id="7_0owmy"]
 [ext_resource type="AudioStream" uid="uid://cn23y3n11ifnv" path="res://asssets/Audio/snowball_hit_impact_10.wav" id="9_h17s1"]
 [ext_resource type="PackedScene" uid="uid://51vflldx3b1j" path="res://scenes/ui/inventory_manager.tscn" id="11_je7p5"]
 
@@ -223,8 +223,12 @@ properties/3/path = NodePath("HealthBar/ProgressBar:value")
 properties/3/spawn = true
 properties/3/replication_mode = 1
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_je7p5"]
+bg_color = Color(0.10927788, 0.39663184, 0.25383613, 1)
+
 [sub_resource type="Theme" id="Theme_je7p5"]
 ProgressBar/colors/font_outline_color = Color(0, 0.44483453, 0, 1)
+ProgressBar/styles/fill = SubResource("StyleBoxFlat_je7p5")
 
 [node name="Player" type="CharacterBody3D" groups=["players"]]
 transform = Transform3D(-1, 0, -1.509958e-07, 0, 1, 0, 1.509958e-07, 0, -1, 0, 0, 0)
@@ -754,7 +758,7 @@ script = ExtResource("7_0owmy")
 
 [node name="InventoryManager" parent="." instance=ExtResource("11_je7p5")]
 
-[node name="HealthBar" type="Control" parent="."]
+[node name="PlayerStats" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 3
 anchor_left = 1.0
@@ -766,7 +770,7 @@ offset_top = -40.0
 grow_horizontal = 0
 grow_vertical = 0
 
-[node name="ProgressBar" type="ProgressBar" parent="HealthBar"]
+[node name="ProgressBar" type="ProgressBar" parent="PlayerStats"]
 layout_mode = 0
 offset_left = -25.0
 offset_right = 180.0

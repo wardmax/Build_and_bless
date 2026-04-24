@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://cax2obby"]
 
-[ext_resource type="Script" uid="uid://tlr6dxrrmxqe" path="res://scenes/ui/lobby.gd" id="1_lobby"]
+[ext_resource type="Script" uid="uid://tlr6dxrrmxqe" path="res://scripts/lobby.gd" id="1_lobby"]
 
 [node name="Lobby" type="CanvasLayer"]
 script = ExtResource("1_lobby")

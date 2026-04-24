@@ -90,8 +90,8 @@ func _setup_authority():
 		$MultiplayerSynchronizer.set_multiplayer_authority(id)
 		
 	if is_multiplayer_authority():
-		$HealthBar/ProgressBar.value=health
-		$HealthBar.show() # Only I see my bar
+		$PlayerStats/ProgressBar.value=health
+		$PlayerStats.show() # Only I see my bar
 		var mm = get_tree().root.find_child("MultiplayerManager", true, false)
 		if mm and not mm.is_match_started:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -108,11 +108,11 @@ func _setup_authority():
 		# Inventory setup
 		inventory_manager.item_equipped.connect(_on_item_equipped)
 	elif multiplayer.is_server():
-		$HealthBar.hide() # Only I see my bar
+		$PlayerStats.hide() # Only I see my bar
 		# Server needs to keep track of all players' items to validate shooting/actions
 		inventory_manager.item_equipped.connect(_on_item_equipped)
 	else:
-		$HealthBar.hide() # Only I see my bar
+		$PlayerStats.hide() # Only I see my bar
 		if has_node("Camera3D"):
 			$Camera3D.current = false
 
@@ -156,8 +156,8 @@ func _unhandled_input(event):
 	set(v):
 		health = v
 		# Update the UI if it exists	
-		if has_node("HealthBar/ProgressBar"):
-			$HealthBar/ProgressBar.value = v
+		if has_node("PlayerStats/ProgressBar"):
+			$PlayerStats/ProgressBar.value = v
 
 @rpc("any_peer", "call_local")
 func update_health(new_health):

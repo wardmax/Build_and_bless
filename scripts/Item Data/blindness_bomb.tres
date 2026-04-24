@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ThrowableType" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/Item Data/throwable_type.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+explosion_radius = 4.0
+fuse_time = 0.0
+destroy_voxels = false
+explosion_damage = 0
+particle_color = Color(0.1, 0.1, 0.1, 1)
+particle_emission = Color(0, 0, 0, 1)
+particle_count = 50
+particle_size = 0.4
+particle_lifetime = 2.0
+effect_id = "blindness"
+effect_intensity = 1.0
+effect_duration = 4.0
