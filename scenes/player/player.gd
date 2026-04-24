@@ -23,10 +23,15 @@ var dig_place_cooldown = 0.2
 @onready var inventory_manager = $InventoryManager
 
 var trajectory_multimesh := MultiMeshInstance3D.new()
+var _ground_snap_timer: float = 0.0
+var _multiplayer_manager = null
+var is_dead: bool = false
 var charge_start_time: float = 0.0
 
 var server_last_shot_time = 0
 var consecutive_shots = 0
+var _death_screen: CanvasLayer = null
+var _pending_respawn_pos: Vector3 = Vector3.ZERO
 
 # Procedural Recoil State
 var gun_recoil_rotation = Vector3.ZERO
@@ -63,6 +68,9 @@ func _ready():
 	trajectory_multimesh.top_level = true
 	trajectory_multimesh.visible = false
 	add_child(trajectory_multimesh)
+	
+	# Cache MultiplayerManager once instead of searching every frame
+	_multiplayer_manager = get_tree().root.find_child("MultiplayerManager", true, false)
 	
 	# Configure authority if name is already set (Server), or wait for renamed signal (Client)
 	_setup_authority()
@@ -113,8 +121,9 @@ func _unhandled_input(event):
 	if not is_multiplayer_authority():
 		return
 		
-	var mm = get_tree().root.find_child("MultiplayerManager", true, false)
-	if mm and not mm.is_match_started:
+	if not is_instance_valid(_multiplayer_manager):
+		_multiplayer_manager = get_tree().root.find_child("MultiplayerManager", true, false)
+	if _multiplayer_manager and not _multiplayer_manager.is_match_started:
 		return
 
 	# Handle Mouse Look
@@ -159,16 +168,20 @@ func _physics_process(delta: float) -> void:
 	if not is_multiplayer_authority():
 		return
 
-	var mm = get_tree().root.find_child("MultiplayerManager", true, false)
-	if mm and not mm.is_match_started:
+	# Use cached reference - refresh if it somehow became null
+	if not is_instance_valid(_multiplayer_manager):
+		_multiplayer_manager = get_tree().root.find_child("MultiplayerManager", true, false)
+	if _multiplayer_manager and not _multiplayer_manager.is_match_started:
 		velocity = Vector3.ZERO
-		# Snap to ground as it generates async in the background
-		var query = PhysicsRayQueryParameters3D.create(global_position + Vector3(0, 50, 0), global_position + Vector3(0, -150, 0))
-		query.exclude = [self.get_rid()]
-		var result = get_world_3d().direct_space_state.intersect_ray(query)
-		if result and result.collider is VoxelTerrain:
-			# Snap slightly above the voxel surface so they're waiting on the floor comfortably
-			global_position.y = result.position.y + 1.0
+		# Throttle ground-snap raycast to every 0.5s instead of every physics frame
+		_ground_snap_timer -= delta
+		if _ground_snap_timer <= 0.0:
+			_ground_snap_timer = 0.5
+			var query = PhysicsRayQueryParameters3D.create(global_position + Vector3(0, 50, 0), global_position + Vector3(0, -150, 0))
+			query.exclude = [self.get_rid()]
+			var result = get_world_3d().direct_space_state.intersect_ray(query)
+			if result and result.collider is VoxelLodTerrain:
+				global_position.y = result.position.y + 1.0
 		return
 
 	# 1. Gravity
@@ -390,7 +403,7 @@ func shoot():
 			
 			#hitting voxel
 			# Get the VoxelTool
-			elif target is VoxelTerrain:
+			elif target is VoxelLodTerrain:
 				var world_pos = hit_point - hit_normal * 0.1
 				var local_pos = target.to_local(world_pos)
 				var voxel_pos = Vector3i(
@@ -422,10 +435,11 @@ func destroy_voxel(terrain_path: NodePath, voxel_pos: Vector3i):
 		# Try from the root in case the path is absolute
 		terrain = get_tree().root.get_node_or_null(terrain_path)
 	if terrain == null:
-		push_warning("destroy_voxel: could not find VoxelTerrain at path: ", terrain_path)
+		push_warning("destroy_voxel: could not find VoxelLodTerrain at path: ", terrain_path)
 		return
 	var vt = terrain.get_voxel_tool()
-	vt.set_voxel(voxel_pos, 0)
+	vt.channel = VoxelBuffer.CHANNEL_SDF
+	vt.set_voxel_f(voxel_pos, 1.0)
 
 @rpc("any_peer", "call_local")
 func destroy_voxel_sphere(terrain_path: NodePath, world_pos: Vector3, radius: float):
@@ -433,10 +447,11 @@ func destroy_voxel_sphere(terrain_path: NodePath, world_pos: Vector3, radius: fl
 	if terrain == null:
 		terrain = get_tree().root.get_node_or_null(terrain_path)
 	if terrain == null:
-		push_warning("destroy_voxel_sphere: could not find VoxelTerrain at path: ", terrain_path)
+		push_warning("destroy_voxel_sphere: could not find VoxelLodTerrain at path: ", terrain_path)
 		return
 	var vt = terrain.get_voxel_tool()
-	vt.value = 0
+	vt.channel = VoxelBuffer.CHANNEL_SDF
+	vt.mode = VoxelTool.MODE_REMOVE
 	var local_pos = terrain.to_local(world_pos)
 	var local_radius = radius / terrain.scale.x
 	vt.do_sphere(local_pos, local_radius)
@@ -507,42 +522,43 @@ func shovel_action(is_digging: bool):
 	
 	var ray = $Camera3D/RayCast3D
 	ray.force_raycast_update()
-	if ray.is_colliding() and ray.get_collider() is VoxelTerrain:
+	if ray.is_colliding() and ray.get_collider() is VoxelLodTerrain:
 		var hit_point = ray.get_collision_point()
 		var hit_normal = ray.get_collision_normal()
 		var target = ray.get_collider()
 		
-		var offset = -0.1 if is_digging else 0.1
-		var world_pos = hit_point + hit_normal * offset
-		var local_pos = target.to_local(world_pos)
+		# Dig: center sphere exactly on surface for a deep scoop. 
+		# Place: sit sphere exactly on top of the surface.
+		var shovel_radius = 2.0
+		var world_pos = hit_point + hit_normal * (0.0 if is_digging else shovel_radius)
 		
-		var voxel_pos = Vector3i(floor(local_pos.x), floor(local_pos.y), floor(local_pos.z))
-		var val = 0 if is_digging else 1
-		
-		# A 3x3x3 chunk is modeled as costing/yielding 1 "bucket" of blocks for simplicity
 		if is_digging:
 			collected_blocks += 1
 		else:
 			collected_blocks -= 1
-			
+		print(collected_blocks)
 		update_collected_blocks.rpc_id(str(name).to_int(), collected_blocks)
-		set_voxel_chunk_synced.rpc(target.get_path(), voxel_pos, val)
+		dig_sphere_synced.rpc(target.get_path(), world_pos, is_digging)
 
 @rpc("any_peer", "call_local")
 func update_collected_blocks(count: int):
 	collected_blocks = count
 
+# Digs or places a smooth sphere of SDF terrain, synced across all peers.
 @rpc("any_peer", "call_local")
-func set_voxel_chunk_synced(terrain_path: NodePath, voxel_pos: Vector3i, val: int):
+func dig_sphere_synced(terrain_path: NodePath, world_pos: Vector3, is_digging: bool):
 	var terrain = get_tree().root.get_node_or_null(terrain_path)
 	if terrain == null:
-		terrain = get_tree().root.find_child("VoxelTerrain", true, false)
-	if terrain is VoxelTerrain:
+		terrain = get_tree().root.find_child("VoxelLodTerrain", true, false)
+	if terrain is VoxelLodTerrain:
 		var vt = terrain.get_voxel_tool()
-		for x in range(-1, 2):
-			for y in range(-1, 2):
-				for z in range(-1, 2):
-					vt.set_voxel(voxel_pos + Vector3i(x, y, z), val)
+		vt.channel = VoxelBuffer.CHANNEL_SDF
+		# MODE_REMOVE carves out material (dig), MODE_ADD fills in material (place)
+		vt.mode = VoxelTool.MODE_REMOVE if is_digging else VoxelTool.MODE_ADD
+		var local_pos = terrain.to_local(world_pos)
+		# 2.0 world-unit radius sphere
+		var local_radius = 2.0 / terrain.scale.x
+		vt.do_sphere(local_pos, local_radius)
 
 @rpc("any_peer", "call_remote")
 func request_spawn_point():
@@ -570,6 +586,8 @@ func update_weapon_mesh():
 	if w_bomb: w_bomb.visible = (current_item_data.category == ItemData.ItemCategory.GRENADE)
 
 func take_damage(amount, shooter_id=0):
+	if is_dead:
+		return
 	health -= amount
 	update_health.rpc_id(str(name).to_int(), health) 
 	print("Player took damage! Health: ", health)
@@ -577,33 +595,92 @@ func take_damage(amount, shooter_id=0):
 		die(shooter_id)
 
 func die(shooter_id=0):
+	is_dead = true
 	print("Player died!")
-	health = 100
+	# Note: We don't reset health to 100 here anymore; respawn() handles that.
+	
 	var spawn_pos = Vector3(0, 150, 0)
 	
 	if multiplayer.is_server():
-		var mm = get_tree().root.find_child("MultiplayerManager", true, false)
-		if mm:
+		if not is_instance_valid(_multiplayer_manager):
+			_multiplayer_manager = get_tree().root.find_child("MultiplayerManager", true, false)
+		if _multiplayer_manager:
 			if shooter_id != 0:
-				mm.report_kill(shooter_id)
-			spawn_pos = mm.get_spawn_pos(str(name).to_int())
+				_multiplayer_manager.report_kill(shooter_id)
+			spawn_pos = _multiplayer_manager.get_spawn_pos(str(name).to_int())
 			
-	respawn.rpc_id(get_multiplayer_authority(), spawn_pos)
+	# Instead of immediate respawn, show the death screen to the victim
+	show_death_screen.rpc_id(str(name).to_int(), spawn_pos)
+
+@rpc("any_peer", "call_local")
+func show_death_screen(spawn_pos: Vector3):
+	_pending_respawn_pos = spawn_pos
+	
+	# Only the local player sees their own death screen
+	if not is_multiplayer_authority():
+		return
+		
+	if _death_screen == null:
+		_death_screen = CanvasLayer.new()
+		_death_screen.layer = 10
+		add_child(_death_screen)
+		
+		var panel = ColorRect.new()
+		panel.color = Color(0, 0, 0, 0.7)
+		panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_death_screen.add_child(panel)
+		
+		var v_box = VBoxContainer.new()
+		v_box.alignment = BoxContainer.ALIGNMENT_CENTER
+		v_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		panel.add_child(v_box)
+		
+		var label = Label.new()
+		label.text = "YOU DIED"
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.add_theme_font_size_override("font_size", 64)
+		label.add_theme_color_override("font_color", Color.RED)
+		v_box.add_child(label)
+		
+		var btn = Button.new()
+		btn.text = "RESPAWN"
+		btn.custom_minimum_size = Vector2(200, 60)
+		btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		btn.add_theme_font_size_override("font_size", 32)
+		btn.pressed.connect(_on_respawn_button_pressed)
+		v_box.add_child(btn)
+		
+	_death_screen.visible = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+func _on_respawn_button_pressed():
+	if _death_screen:
+		_death_screen.visible = false
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	# Request respawn at the position provided by the server
+	respawn.rpc(_pending_respawn_pos)
 
 @rpc("any_peer", "call_local")
 func respawn(spawn_pos: Vector3):
+	is_dead = false
 	health = 100
 	velocity = Vector3.ZERO
+	global_position = spawn_pos
 	
-	# Raycast to ensure we start directly on the procedural ground
-	var query = PhysicsRayQueryParameters3D.create(spawn_pos + Vector3(0, 100, 0), spawn_pos + Vector3(0, -200, 0))
+	# Close death screen if it was open (for local player)
+	if is_multiplayer_authority() and _death_screen:
+		_death_screen.visible = false
+	
+	# Defer the ground-snap raycast so it doesn't stall against async voxel geometry.
+	# A short wait lets the physics server finish its current tick first.
+	await get_tree().create_timer(0.1).timeout
+	if not is_instance_valid(self):
+		return
+	var query = PhysicsRayQueryParameters3D.create(global_position + Vector3(0, 50, 0), global_position + Vector3(0, -100, 0))
 	query.exclude = [self.get_rid()]
 	var result = get_world_3d().direct_space_state.intersect_ray(query)
-	
-	if result and result.collider is VoxelTerrain:
+	if result and result.collider is VoxelLodTerrain:
 		global_position = result.position + Vector3(0, 1.0, 0)
-	else:
-		global_position = spawn_pos
 
 @rpc("any_peer", "call_local")
 func notify_hit_marker():

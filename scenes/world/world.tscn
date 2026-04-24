@@ -1,7 +1,6 @@
-[gd_scene load_steps=18 format=3 uid="uid://baq8wujtrjp3a"]
+[gd_scene load_steps=16 format=3 uid="uid://baq8wujtrjp3a"]
 
 [ext_resource type="Texture2D" uid="uid://bww4n8c7pehng" path="res://asssets/Skyboxes/Epic_BlueSunset_EquiRect_flat.png" id="1_1fp7r"]
-[ext_resource type="VoxelGeneratorGraph" uid="uid://n8ga6ousqxup" path="res://scenes/world/islands_v1.tres" id="1_dphjl"]
 [ext_resource type="Script" uid="uid://f31x03o7wc2k" path="res://scenes/world/water.gd" id="2_water"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_6m72w"]
@@ -50,19 +49,17 @@ height = 1.0
 height = 1.0
 radius = 200.0
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dphjl"]
-vertex_color_use_as_albedo = true
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1fp7r"]
+albedo_color = Color(0.20324683, 0.32109788, 0.1766046, 1)
 
-[sub_resource type="VoxelBlockyModelEmpty" id="VoxelBlockyModelEmpty_6m72w"]
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_6m72w"]
+noise_type = 2
+frequency = 0.003
 
-[sub_resource type="VoxelBlockyModelCube" id="VoxelBlockyModelCube_v5dby"]
-color = Color(0.55405915, 0.3883254, 0.096439295, 1)
+[sub_resource type="VoxelGeneratorNoise2D" id="VoxelGeneratorNoise2D_v5dby"]
+noise = SubResource("FastNoiseLite_6m72w")
 
-[sub_resource type="VoxelBlockyLibrary" id="VoxelBlockyLibrary_t5ptc"]
-models = Array[VoxelBlockyModel]([SubResource("VoxelBlockyModelEmpty_6m72w"), SubResource("VoxelBlockyModelCube_v5dby")])
-
-[sub_resource type="VoxelMesherBlocky" id="VoxelMesherBlocky_bq33v"]
-library = SubResource("VoxelBlockyLibrary_t5ptc")
+[sub_resource type="VoxelMesherTransvoxel" id="VoxelMesherTransvoxel_1fp7r"]
 
 [node name="world" type="Node3D"]
 
@@ -86,10 +83,30 @@ mesh = SubResource("CylinderMesh_036b0")
 shape = SubResource("CylinderShape3D_dphjl")
 debug_color = Color(0.9990538, 0, 0.13788271, 0.41960785)
 
-[node name="VoxelTerrain" type="VoxelTerrain" parent="."]
-bounds = AABB(-1008, -512, -1008, 2016, 1024, 2016)
-max_view_distance = 400
-material_override = SubResource("StandardMaterial3D_dphjl")
-generator = ExtResource("1_dphjl")
-mesher = SubResource("VoxelMesherBlocky_bq33v")
-transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, 0, 0, 0)
+[node name="VoxelLodTerrain" type="VoxelLodTerrain" parent="."]
+view_distance = 200
+voxel_bounds = AABB(-128, -128, -128, 256, 256, 256)
+material = SubResource("StandardMaterial3D_1fp7r")
+generator = SubResource("VoxelGeneratorNoise2D_v5dby")
+mesher = SubResource("VoxelMesherTransvoxel_1fp7r")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 18.694054, 0)
+
+[node name="VoxelViewer" type="VoxelViewer" parent="."]
+view_distance = 160
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -80.10565, 31.59301, -71.20502)
+
+[node name="VoxelViewer2" type="VoxelViewer" parent="."]
+view_distance = 160
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 48.95349, 31.59301, -71.20502)
+
+[node name="VoxelViewer3" type="VoxelViewer" parent="."]
+view_distance = 160
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.125793, 31.59301, 51.178627)
+
+[node name="VoxelViewer4" type="VoxelViewer" parent="."]
+view_distance = 160
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 112.34494, 31.59301, -124.63324)
+
+[node name="VoxelViewer5" type="VoxelViewer" parent="."]
+view_distance = 160
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -112.78018, 63.18602, -128.23521)

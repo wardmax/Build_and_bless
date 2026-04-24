@@ -2,7 +2,7 @@ extends RigidBody3D
 class_name Throwable
 
 @export var explode_on_impact: bool = true
-@export var explosion_radius: float = 3.0
+@export var explosion_radius: float = 2.0
 @export var fuse_time: float = 0.0
 @export var destroy_voxels: bool = true
 @export var shrapnel_count: int = 20
@@ -36,7 +36,7 @@ func _physics_process(_delta):
 		global_transform.basis = global_transform.basis.slerp(new_basis, 0.3)
 
 func _on_body_entered(body):
-	if body is VoxelTerrain:
+	if body is VoxelLodTerrain:
 		last_hit_terrain = body.get_path()
 		
 	if exploded or not multiplayer.is_server():
@@ -51,25 +51,26 @@ func _explode():
 	exploded = true
 	_trigger_explosion()
 	sync_explode.rpc()
-
+	
 @rpc("call_local", "authority", "reliable")
 func sync_explode():
-	_spawn_shrapnel()
+	_spawn_explosion_particles()
 	queue_free()
 
 func _trigger_explosion():
 	if destroy_voxels:
 		var terrain_path = last_hit_terrain
 		if terrain_path.is_empty():
-			var terrain = get_tree().root.find_child("VoxelTerrain", true, false)
+			# Try to find the terrain in the tree if we didn't hit it directly
+			var terrain = get_tree().root.find_child("VoxelLodTerrain", true, false)
 			if terrain:
 				terrain_path = terrain.get_path()
-			else:
-				terrain_path = NodePath("/root/Game/world/VoxelTerrain")
+		
+		# Find a node (like a Player) that can execute the destruction RPC
 		_find_player_and_explode(get_tree().root, terrain_path)
 
 func _find_player_and_explode(node: Node, terrain_path: NodePath) -> bool:
-	if node.has_method("destroy_voxel_sphere"):
+	if node.has_method("destroy_voxel_sphere") and node.is_multiplayer_authority():
 		node.destroy_voxel_sphere.rpc(terrain_path, global_position, explosion_radius)
 		return true
 		
@@ -78,43 +79,43 @@ func _find_player_and_explode(node: Node, terrain_path: NodePath) -> bool:
 			return true
 	return false
 
-func _spawn_shrapnel():
-	# Spawn shrapnel visually on server and clients
-	for i in range(shrapnel_count):
-		var s = RigidBody3D.new()
-		var mesh_inst = MeshInstance3D.new()
-		var box = BoxMesh.new()
-		box.size = Vector3(randf_range(0.05, 0.18), randf_range(0.05, 0.18), randf_range(0.05, 0.18))
-		mesh_inst.mesh = box
-		
-		var mat = StandardMaterial3D.new()
-		mat.albedo_color = Color("8d6319")
-		mat.roughness = 0.9
-		mesh_inst.material_override = mat
-		
-		var col = CollisionShape3D.new()
-		var shape = BoxShape3D.new()
-		shape.size = box.size
-		col.shape = shape
-		
-		s.add_child(mesh_inst)
-		s.add_child(col)
-		get_tree().root.add_child(s)
-		s.global_position = global_position
-		
-		# Random spread direction with upward bias
-		var rand_dir = Vector3(
-			randf_range(-1.0, 1.0),
-			randf_range(0.2, 1.0),
-			randf_range(-1.0, 1.0)
-		).normalized()
-		
-		var speed = randf_range(shrapnel_speed * 0.4, shrapnel_speed)
-		s.apply_impulse(rand_dir * speed)
-		s.angular_velocity = Vector3(randf_range(-8,8), randf_range(-8,8), randf_range(-8,8))
-		
-		# Auto-clean shrapnel after a few seconds
-		get_tree().create_timer(randf_range(2.5, 4.0)).timeout.connect(func():
-			if is_instance_valid(s):
-				s.queue_free()
-		)
+func _spawn_explosion_particles():
+	var particles = CPUParticles3D.new()
+	get_tree().root.add_child(particles)
+	particles.global_position = global_position
+	
+	# Configure explosion look
+	particles.emitting = false
+	particles.amount = 30
+	particles.one_shot = true
+	particles.explosiveness = 1.0
+	particles.lifetime = 1.0
+	
+	# Shape
+	particles.spread = 180.0
+	particles.gravity = Vector3(0, -2, 0)
+	particles.initial_velocity_min = 5.0
+	particles.initial_velocity_max = 10.0
+	
+	# Appearance
+	var mesh = SphereMesh.new()
+	mesh.radius = 0.1
+	mesh.height = 0.2
+	particles.mesh = mesh
+	
+	var mat = StandardMaterial3D.new()
+	mat.albedo_color = Color(1, 0.5, 0) # Orange
+	mat.emission_enabled = true
+	mat.emission = Color(1, 0.3, 0)
+	particles.material_override = mat
+	
+	# Scale curve (shrink over time)
+	var curve = Curve.new()
+	curve.add_point(Vector2(0, 1))
+	curve.add_point(Vector2(1, 0))
+	particles.scale_amount_curve = curve
+	
+	particles.emitting = true
+	
+	# Auto-cleanup
+	get_tree().create_timer(1.5).timeout.connect(particles.queue_free)

@@ -14,19 +14,25 @@ var is_match_started = false
 const MATCH_DURATION: float = 180.0  # 5:00
 var _time_remaining: float = MATCH_DURATION
 var _timer_sync_accum: float = 0.0  # Only broadcast timer every second
+var _scoreboard_sync_accum: float = 0.0  # Only broadcast scoreboard at most once per second
+var _scoreboard_dirty: bool = false  # Flag if scoreboard needs syncing
+var _cached_scoreboard: Node = null
 
 func _process(delta):
 	if multiplayer.has_multiplayer_peer() and is_multiplayer_authority():
-		var stats_changed = false
 		for net_id in _players_in_game:
 			var p = _players_in_game[net_id]
 			if is_instance_valid(p) and _player_stats.has(net_id):
 				var h = int(p.global_position.y)
 				if _player_stats[net_id]["height"] != h:
 					_player_stats[net_id]["height"] = h
-					stats_changed = true
+					_scoreboard_dirty = true
 					
-		if stats_changed:
+		# Throttle scoreboard sync to at most once per second to avoid RPC flooding
+		_scoreboard_sync_accum += delta
+		if _scoreboard_dirty and _scoreboard_sync_accum >= 1.0:
+			_scoreboard_sync_accum = 0.0
+			_scoreboard_dirty = false
 			update_local_scoreboard()
 			sync_scoreboard.rpc(_player_stats)
 			
@@ -131,9 +137,10 @@ func sync_scoreboard(stats: Dictionary):
 	update_local_scoreboard()
 
 func update_local_scoreboard():
-	var scoreboard = get_tree().root.find_child("Scoreboard", true, false)
-	if scoreboard and scoreboard.has_method("update_ui"):
-		scoreboard.update_ui(_player_stats)
+	if not is_instance_valid(_cached_scoreboard):
+		_cached_scoreboard = get_tree().root.find_child("Scoreboard", true, false)
+	if _cached_scoreboard and _cached_scoreboard.has_method("update_ui"):
+		_cached_scoreboard.update_ui(_player_stats)
 
 @rpc("any_peer", "call_local", "reliable")
 func report_kill(killer_id: int):
@@ -176,9 +183,10 @@ func sync_timer(seconds: float):
 	update_local_scoreboard_timer(seconds)
 
 func update_local_scoreboard_timer(seconds: float):
-	var scoreboard = get_tree().root.find_child("Scoreboard", true, false)
-	if scoreboard and scoreboard.has_method("update_timer"):
-		scoreboard.update_timer(seconds)
+	if not is_instance_valid(_cached_scoreboard):
+		_cached_scoreboard = get_tree().root.find_child("Scoreboard", true, false)
+	if _cached_scoreboard and _cached_scoreboard.has_method("update_timer"):
+		_cached_scoreboard.update_timer(seconds)
 
 func _on_match_end():
 	if not is_multiplayer_authority():

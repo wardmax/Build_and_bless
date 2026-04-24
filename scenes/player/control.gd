@@ -7,6 +7,7 @@ var cross_hair_thickness = 1
 # Call this when an enemy is hit
 func register_hit():
 	_t = 0.15 # 0.15 seconds duration
+	queue_redraw() # Only redraw when a hit is registered
 
 func _draw():
 	var center = get_viewport_rect().size / 2.0
@@ -25,4 +26,5 @@ func _draw():
 func _process(delta):
 	if _t > 0.0:
 		_t -= delta
-	queue_redraw()
+		if _t <= 0.0:
+			queue_redraw() # One final redraw to clear the red indicator

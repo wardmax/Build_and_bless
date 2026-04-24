@@ -8,8 +8,8 @@ extends CanvasLayer
 @onready var game_id_label = $ColorRect/VBoxContainer/ConnectionInfoContainer/GameIdPanel/GameIdLabel
 @onready var game_id_panel = $ColorRect/VBoxContainer/ConnectionInfoContainer/GameIdPanel
 
-var load_timer: float = 10.0
-var time_left: float = 10.0
+var load_timer: float = 1.0
+var time_left: float = 1.0
 var progress_bar: ProgressBar
 
 func _ready():
@@ -30,7 +30,7 @@ func _ready():
 	else:
 		start_btn.hide()
 		progress_bar.hide()
-		waiting_label.text = "Waiting for Host... (Match begins ~10s after host creation)"
+		waiting_label.text = "Waiting for Host..."
 		
 	if NetworkManager.active_host_ip != "":
 		ip_label.text = "IP: " + NetworkManager.active_host_ip
@@ -49,7 +49,7 @@ func _process(delta):
 	if NetworkManager.is_hosting_game and time_left > 0:
 		time_left -= delta
 		progress_bar.value = load_timer - time_left
-		waiting_label.text = "Loading terrain: %d s" % ceil(time_left)
+		waiting_label.text = "Loading terrain..."#%d s" % ceil(time_left)
 		if time_left <= 0:
 			time_left = 0
 			progress_bar.hide()
