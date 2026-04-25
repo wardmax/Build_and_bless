@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://deydkmdnsf5ek"]
 
-[ext_resource type="ArrayMesh" uid="uid://dfdkepi16nxgv" path="res://addons/tree_large.obj" id="1_thqfv"]
+[ext_resource type="ArrayMesh" uid="uid://dfdkepi16nxgv" path="res://asssets/Models/tree_large.obj" id="1_thqfv"]
 
 [node name="Node3D" type="Node3D"]
 

@@ -1,13 +1,9 @@
-[gd_scene load_steps=6 format=3 uid="uid://ffncciksi1tw"]
+[gd_scene load_steps=5 format=3 uid="uid://ffncciksi1tw"]
 
 [ext_resource type="Script" uid="uid://bdt8oshccf8uk" path="res://scripts/menus/main_menu.gd" id="1_1dabp"]
 [ext_resource type="Theme" uid="uid://giidcej8oij7" path="res://asssets/ui/menu_theme.tres" id="2_b784e"]
 
-[sub_resource type="Gradient" id="Gradient_ovrgc"]
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_2o76q"]
-gradient = SubResource("Gradient_ovrgc")
-fill_to = Vector2(1, 1)
+[sub_resource type="CanvasTexture" id="CanvasTexture_ovrgc"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_413xs"]
 
@@ -40,7 +36,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = SubResource("GradientTexture2D_2o76q")
+texture = SubResource("CanvasTexture_ovrgc")
 expand_mode = 2
 
 [node name="Menu" type="Panel" parent="."]
@@ -54,6 +50,15 @@ offset_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="Label" type="Label" parent="Menu"]
+layout_mode = 0
+offset_left = 647.0
+offset_top = 552.0
+offset_right = 1135.0
+offset_bottom = 659.0
+theme = ExtResource("2_b784e")
+text = "BUILD & BLESS"
+
 [node name="Exit" type="Button" parent="Menu"]
 layout_mode = 1
 anchors_preset = 1
@@ -62,7 +67,7 @@ anchor_right = 1.0
 offset_left = -210.0
 offset_top = 52.0
 offset_right = -39.0
-offset_bottom = 103.0
+offset_bottom = 109.0
 grow_horizontal = 0
 theme_override_font_sizes/font_size = 48
 text = "Exit"
@@ -90,10 +95,10 @@ flat = true
 
 [node name="JoinGame" type="Button" parent="Menu"]
 layout_mode = 0
-offset_left = 55.0
-offset_top = 125.0
-offset_right = 308.0
-offset_bottom = 176.0
+offset_left = 58.0
+offset_top = 136.0
+offset_right = 393.0
+offset_bottom = 215.0
 text = "Join Game"
 flat = true
 

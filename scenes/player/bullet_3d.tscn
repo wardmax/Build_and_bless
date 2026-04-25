@@ -1,23 +1,50 @@
-[gd_scene load_steps=5 format=3 uid="uid://dp6m6j8m8q4p2"]
+[gd_scene load_steps=5 format=3 uid="uid://bopyiig2x27cc"]
 
-[ext_resource type="Script" path="res://scenes/player/bullet_3d.gd" id="1_4n2m8"]
+[sub_resource type="GDScript" id="GDScript_hxe0g"]
+script/source = "extends Node3D
+
+@export var speed: float = 40.0
+@export var damage: float = 10.0
+@export var lifetime: float = 2.0
+
+var _timer: float = 0.0
+
+func _ready():
+	# Ensure the bullet is top-level so it doesn't move with the player that spawned it
+	set_as_top_level(true)
+
+func _physics_process(delta: float):
+	# Move forward in local Z axis (usually -Z is forward in Godot)
+	# However, since we set it top-level, we use transform.basis.z
+	position -= transform.basis.z * speed * delta
+	
+	_timer += delta
+	if _timer >= lifetime:
+		queue_free()
+
+func _on_area_3d_body_entered(body: Node3D):
+	if body.is_in_group(\"player\"):
+		if body.has_method(\"take_damage\"):
+			body.take_damage(damage)
+	
+	# Bullet hit something (wall or player)
+	queue_free()
+"
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_bullet"]
+radius = 0.1
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bullet"]
-albedo_color = Color(1.0, 0.84, 0.0, 1.0) # Gold-ish bullet color
-emission_enabled = true
-emission = Color(1.0, 0.84, 0.0, 1.0)
+albedo_color = Color(1, 0.84, 0, 1)
+emission = Color(1, 0.84, 0, 1)
 emission_energy_multiplier = 2.0
 
 [sub_resource type="SphereMesh" id="SphereMesh_bullet"]
 material = SubResource("StandardMaterial3D_bullet")
 radius = 0.05
-height = 1.0
-
-[sub_resource type="SphereShape3D" id="SphereShape3D_bullet"]
-radius = 0.1
 
 [node name="bullet_3d" type="Node3D"]
-script = ExtResource("1_4n2m8")
+script = SubResource("GDScript_hxe0g")
 
 [node name="Area3D" type="Area3D" parent="."]
 collision_layer = 0

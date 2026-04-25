@@ -1,24 +1,36 @@
 extends CharacterBody3D
 
-@export var SPEED = 5.0
-@export var ACCEL = 10.0
-@export var FRICTION = 30.0
-@export var JUMP_VELOCITY = 4.5
+@export var SPEED = 8
+@export var ACCEL = 11.0
+@export var FRICTION = 30
+@export var JUMP_VELOCITY = 7
 @export var MOUSE_SENSITIVITY = 0.003
 
-@export var FIRE_RATE = .2
+@export var FIRE_RATE = .1
 @export var MAX_AMMO = 20
 @export var RELOAD_TIME = 2.0
+@export var SHOVEL_RADIUS: float = 1
 @export var BULLET_SPREAD = 2 # Spread amount at the raycast's max distance
+var dig_place_cooldown = 1
 
 var current_item_data: ItemData
 var is_priming_throw: bool = false
 var primed_throw_force: float = 15.0
-var current_ammo = 20
-var collected_blocks = 0
+var current_ammo = 20:
+	
+	set(v):
+		current_ammo = v
+		if is_multiplayer_authority() and inventory_manager:
+			inventory_manager.update_hud_stats(current_ammo, soil_volume)
+
+var soil_volume: float = 0.0:
+	set(v):
+		soil_volume = v
+		if is_multiplayer_authority() and inventory_manager:
+			inventory_manager.update_hud_stats(current_ammo, soil_volume)
 var time_since_last_shot = 0.0
 var is_reloading = false
-var dig_place_cooldown = 0.2
+
 
 @onready var inventory_manager = $InventoryManager
 
@@ -97,6 +109,10 @@ func _setup_authority():
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		else:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		
+		# Initial UI sync
+		if inventory_manager:
+			inventory_manager.update_hud_stats(current_ammo, soil_volume)
 			
 		if has_node("Camera3D"):
 			$Camera3D.current = true
@@ -134,8 +150,13 @@ func _unhandled_input(event):
 		# Rotate the camera up/down (X axis) - Assumes you have a Camera3D child
 		var camera = $Camera3D 
 		if camera:
-			camera.rotate_x(event.relative.y * MOUSE_SENSITIVITY)
+			# Directly modify and clamp the X rotation to prevent "flipping" or 360 degree loops
+			camera.rotation.x -= event.relative.y * MOUSE_SENSITIVITY
 			camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(-80), deg_to_rad(80))
+			
+			# Lock Y to 180 degrees (PI) to match your scene's orientation
+			camera.rotation.y = PI
+			camera.rotation.z = 0
 
 	# Toggle mouse capture with ESC
 	if Input.is_action_just_pressed("ui_cancel"):
@@ -276,7 +297,7 @@ func _physics_process(delta: float) -> void:
 				$SoundFX/shootFX.pitch_scale = randf_range(1.4, 1.6)
 				$SoundFX/shootFX.play()
 			elif Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
-				if collected_blocks > 0:
+				if soil_volume > 0:
 					time_since_last_shot = 0.0
 					shovel_action.rpc_id(1, false)
 					$SoundFX/shootFX.pitch_scale = randf_range(0.7, 0.9)
@@ -405,14 +426,8 @@ func shoot():
 			# Get the VoxelTool
 			elif target is VoxelLodTerrain:
 				var world_pos = hit_point - hit_normal * 0.1
-				var local_pos = target.to_local(world_pos)
-				var voxel_pos = Vector3i(
-					floor(local_pos.x),
-					floor(local_pos.y),
-					floor(local_pos.z)
-				)
-				# Replicate the voxel destruction to all clients
-				destroy_voxel.rpc(target.get_path(), voxel_pos)
+				# Replicate the voxel destruction to all clients using a small sphere
+				destroy_voxel_sphere.rpc(target.get_path(), world_pos, 0.5)
 				
 			# Apply physics force if it's a Rigidbody
 			if target is RigidBody3D:
@@ -428,18 +443,6 @@ func shoot():
 		# Restore original raycast path for the next shot
 		ray.target_position = original_target
 		
-@rpc("any_peer", "call_local")
-func destroy_voxel(terrain_path: NodePath, voxel_pos: Vector3i):
-	var terrain = get_node_or_null(terrain_path)
-	if terrain == null:
-		# Try from the root in case the path is absolute
-		terrain = get_tree().root.get_node_or_null(terrain_path)
-	if terrain == null:
-		push_warning("destroy_voxel: could not find VoxelLodTerrain at path: ", terrain_path)
-		return
-	var vt = terrain.get_voxel_tool()
-	vt.channel = VoxelBuffer.CHANNEL_SDF
-	vt.set_voxel_f(voxel_pos, 1.0)
 
 @rpc("any_peer", "call_local")
 func destroy_voxel_sphere(terrain_path: NodePath, world_pos: Vector3, radius: float):
@@ -529,19 +532,22 @@ func shovel_action(is_digging: bool):
 		
 		# Dig: center sphere exactly on surface for a deep scoop. 
 		# Place: sit sphere exactly on top of the surface.
-		var shovel_radius = 2.0
-		var world_pos = hit_point + hit_normal * (0.0 if is_digging else shovel_radius)
+		var world_pos = hit_point + hit_normal * (0.0 if is_digging else SHOVEL_RADIUS)
 		
 		if is_digging:
-			collected_blocks += 1
+			soil_volume += SHOVEL_RADIUS
 		else:
-			collected_blocks -= 1
-		update_collected_blocks.rpc_id(str(name).to_int(), collected_blocks)
+			if soil_volume >= SHOVEL_RADIUS:
+				soil_volume -= SHOVEL_RADIUS
+			else:
+				return # Not enough soil to place
+				
+		update_soil_volume.rpc_id(multiplayer.get_remote_sender_id(), soil_volume)
 		dig_sphere_synced.rpc(target.get_path(), world_pos, is_digging)
 
 @rpc("any_peer", "call_local")
-func update_collected_blocks(count: int):
-	collected_blocks = count
+func update_soil_volume(amount: float):
+	soil_volume = amount
 
 # Digs or places a smooth sphere of SDF terrain, synced across all peers.
 @rpc("any_peer", "call_local")
@@ -555,9 +561,22 @@ func dig_sphere_synced(terrain_path: NodePath, world_pos: Vector3, is_digging: b
 		# MODE_REMOVE carves out material (dig), MODE_ADD fills in material (place)
 		vt.mode = VoxelTool.MODE_REMOVE if is_digging else VoxelTool.MODE_ADD
 		var local_pos = terrain.to_local(world_pos)
-		# 2.0 world-unit radius sphere
-		var local_radius = 2.0 / terrain.scale.x
+		# world-unit radius sphere
+		var local_radius = SHOVEL_RADIUS / terrain.scale.x
 		vt.do_sphere(local_pos, local_radius)
+		
+		# ANTI-BURIAL LOGIC: 
+		# If we are placing voxels (not digging) and the placement is near us,
+		# check if we need to be pushed up to avoid falling through or being stuck.
+		if not is_digging:
+			var flat_dist = Vector2(global_position.x, global_position.z).distance_to(Vector2(world_pos.x, world_pos.z))
+			# If the sphere is roughly under or inside us
+			if flat_dist < SHOVEL_RADIUS + 0.5:
+				var vertical_dist = global_position.y - world_pos.y
+				# If we are below or just above the placement center
+				if vertical_dist < SHOVEL_RADIUS:
+					# Push player up to be safely above the new sphere
+					global_position.y = world_pos.y + SHOVEL_RADIUS + 0.5
 
 @rpc("any_peer", "call_remote")
 func request_spawn_point():

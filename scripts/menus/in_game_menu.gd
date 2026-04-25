@@ -18,7 +18,7 @@ func hide():
 	self.visible = false
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
-func _unhandled_input(event: InputEvent) -> void:
+func _unhandled_input(_event: InputEvent) -> void:
 	if Input.is_action_just_pressed("in-game-menu"):
 		var mm = get_tree().root.find_child("MultiplayerManager", true, false)
 		if mm and not mm.is_match_started:

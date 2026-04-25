@@ -1,7 +1,7 @@
 [gd_scene load_steps=5 format=3 uid="uid://bhopc7bcxcm0a"]
 
 [ext_resource type="Script" uid="uid://b4hnqpxflgvny" path="res://scenes/player/throwable.gd" id="1_script"]
-[ext_resource type="ArrayMesh" uid="uid://be1xconm5ovau" path="res://asssets/Model/football.obj" id="2_oeoxc"]
+[ext_resource type="ArrayMesh" uid="uid://be1xconm5ovau" path="res://asssets/Models/football.obj" id="2_oeoxc"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1h48f"]
 radius = 0.11

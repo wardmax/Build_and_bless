@@ -1,16 +1,24 @@
 [gd_scene load_steps=20 format=4 uid="uid://xjygpllvas2q"]
 
 [ext_resource type="Script" uid="uid://s4je8q1h3ruf" path="res://scenes/player/player.gd" id="1_dovo2"]
-[ext_resource type="Script" uid="uid://d3jltjgdfqhco" path="res://scenes/player/skeleton_3d_2.gd" id="2_5gtgg"]
 [ext_resource type="PackedScene" uid="uid://dcf11oq30ceny" path="res://scenes/player/gun.tscn" id="3_gmlin"]
-[ext_resource type="Texture2D" uid="uid://dslhltwijcw8e" path="res://asssets/Model/Ch36_nonPBR_0.png" id="3_h17s1"]
+[ext_resource type="Texture2D" uid="uid://dslhltwijcw8e" path="res://asssets/Models/Ch36_nonPBR_0.png" id="3_h17s1"]
 [ext_resource type="AudioStream" uid="uid://cw1brkhw2tyn2" path="res://asssets/Audio/gun_rifle_shot_04.wav" id="4_75vfm"]
-[ext_resource type="Texture2D" uid="uid://ykm1jmao0cmp" path="res://asssets/Model/Ch36_nonPBR_3.png" id="4_je7p5"]
+[ext_resource type="Texture2D" uid="uid://ykm1jmao0cmp" path="res://asssets/Models/Ch36_nonPBR_3.png" id="4_je7p5"]
 [ext_resource type="AudioStream" uid="uid://cnlkhoaxvw545" path="res://asssets/Audio/gun_rifle_cock_01.wav" id="5_0owmy"]
 [ext_resource type="AudioStream" uid="uid://bddmswgsnuglu" path="res://asssets/Audio/gun_rifle_dry_fire_01.wav" id="6_qek5x"]
 [ext_resource type="Script" uid="uid://cdte2ipf7gfvb" path="res://scenes/player/cross_hair.gd" id="7_0owmy"]
 [ext_resource type="AudioStream" uid="uid://cn23y3n11ifnv" path="res://asssets/Audio/snowball_hit_impact_10.wav" id="9_h17s1"]
 [ext_resource type="PackedScene" uid="uid://51vflldx3b1j" path="res://scenes/ui/inventory_manager.tscn" id="11_je7p5"]
+
+[sub_resource type="GDScript" id="GDScript_h17s1"]
+script/source = "extends Skeleton3D
+
+
+# Called when the node enters the scene tree for the first time.
+func _ready() -> void:
+	physical_bones_start_simulation()
+"
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dvy3f"]
 resource_name = "Ch36_Body"
@@ -690,7 +698,7 @@ bones/64/enabled = true
 bones/64/position = Vector3(1.8326031e-10, 0.06180026, 6.158407e-13)
 bones/64/rotation = Quaternion(-6.529636e-11, 6.0769525e-17, 6.9388935e-18, 1)
 bones/64/scale = Vector3(1, 1, 1)
-script = ExtResource("2_5gtgg")
+script = SubResource("GDScript_h17s1")
 
 [node name="Ch36" type="MeshInstance3D" parent="Skeleton3D2"]
 mesh = SubResource("ArrayMesh_t22vx")

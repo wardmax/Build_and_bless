@@ -159,3 +159,8 @@ func _update_slot(slot_node: Control, items: Array, index: int):
 	var actual_idx = (index + items.size()) % items.size()
 	var item = items[actual_idx]
 	texture_rect.texture = item.icon
+
+func update_hud_stats(ammo: int, soil: float):
+	if not is_multiplayer_authority(): return
+	$HUD/StatsContainer/AmmoLabel.text = "Ammo: " + str(ammo)
+	$HUD/StatsContainer/SoilLabel.text = "Soil: " + str(snapped(soil, 0.1))
