@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://5vd3jsqrqhtd"]
+
+[ext_resource type="Script" uid="uid://dnkusdpba1lmn" path="res://screen_shot.gd" id="1_ph56i"]
+[ext_resource type="ArrayMesh" uid="uid://cglx8b831w40g" path="res://asssets/Models/smith.obj" id="2_bs4i3"]
+
+[node name="ScreenShot" type="Node"]
+script = ExtResource("1_ph56i")
+
+[node name="Control" type="DirectionalLight3D" parent="."]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(-0.6691307, -0.24806684, 0.70051914, 0, 0.9426415, 0.33380687, -0.7431448, 0.22336042, -0.63075036, 0.20300293, 0.11730957, -0.17590332)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = ExtResource("2_bs4i3")

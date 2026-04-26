@@ -1,7 +1,7 @@
 extends CharacterBody3D
 
 @export var SPEED = 8
-@export var ACCEL = 11.0
+@export var ACCEL = 40.0
 @export var FRICTION = 30
 @export var JUMP_VELOCITY = 7
 @export var MOUSE_SENSITIVITY = 0.003
@@ -11,6 +11,7 @@ extends CharacterBody3D
 @export var RELOAD_TIME = 2.0
 @export var SHOVEL_RADIUS: float = 1
 @export var BULLET_SPREAD = 2 # Spread amount at the raycast's max distance
+var KNOCK_BACK_FORCE = 5.0
 var dig_place_cooldown = 1
 
 var current_item_data: ItemData
@@ -21,15 +22,25 @@ var current_ammo = 20:
 	set(v):
 		current_ammo = v
 		if is_multiplayer_authority() and inventory_manager:
-			inventory_manager.update_hud_stats(current_ammo, soil_volume)
+			inventory_manager.update_hud_stats(current_ammo, current_grenades, soil_volume)
+
+var current_grenades = 5:
+	set(v):
+		current_grenades = v
+		if is_multiplayer_authority() and inventory_manager:
+			inventory_manager.update_hud_stats(current_ammo, current_grenades, soil_volume)
 
 var soil_volume: float = 0.0:
 	set(v):
 		soil_volume = v
 		if is_multiplayer_authority() and inventory_manager:
-			inventory_manager.update_hud_stats(current_ammo, soil_volume)
+			inventory_manager.update_hud_stats(current_ammo, current_grenades, soil_volume)
 var time_since_last_shot = 0.0
 var is_reloading = false
+
+var max_jumps = 1
+var jumps_left = 1
+var shake_intensity = 0.0
 
 
 @onready var inventory_manager = $InventoryManager
@@ -112,7 +123,7 @@ func _setup_authority():
 		
 		# Initial UI sync
 		if inventory_manager:
-			inventory_manager.update_hud_stats(current_ammo, soil_volume)
+			inventory_manager.update_hud_stats(current_ammo, current_grenades, soil_volume)
 			
 		if has_node("Camera3D"):
 			$Camera3D.current = true
@@ -123,6 +134,11 @@ func _setup_authority():
 		
 		# Inventory setup
 		inventory_manager.item_equipped.connect(_on_item_equipped)
+		
+		# Connect blessing menu
+		var blessing_menu = inventory_manager.get_node_or_null("HUD/blessing_menu")
+		if blessing_menu:
+			blessing_menu.purchase_requested.connect(_on_store_purchase_requested)
 	elif multiplayer.is_server():
 		$PlayerStats.hide() # Only I see my bar
 		# Server needs to keep track of all players' items to validate shooting/actions
@@ -142,6 +158,23 @@ func _unhandled_input(event):
 	if _multiplayer_manager and not _multiplayer_manager.is_match_started:
 		return
 
+	if shake_intensity > 0:
+		var shake_offset = Vector3(
+			randf_range(-shake_intensity, shake_intensity),
+			randf_range(-shake_intensity, shake_intensity),
+			0
+		)
+		var cam = get_node_or_null("Camera3D")
+		if cam:
+			cam.h_offset = shake_offset.x
+			cam.v_offset = shake_offset.y
+		shake_intensity = move_toward(shake_intensity, 0.0, get_process_delta_time() * 5.0)
+	else:
+		var cam = get_node_or_null("Camera3D")
+		if cam:
+			cam.h_offset = 0
+			cam.v_offset = 0
+
 	# Handle Mouse Look
 	if event is InputEventMouseMotion:
 		# Rotate the whole player left/right (Y axis)
@@ -160,10 +193,25 @@ func _unhandled_input(event):
 
 	# Toggle mouse capture with ESC
 	if Input.is_action_just_pressed("ui_cancel"):
-		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		else:
+		var blessing_menu = inventory_manager.get_node_or_null("HUD/blessing_menu")
+		if blessing_menu and blessing_menu.visible:
+			blessing_menu.visible = false
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		else:
+			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+				Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+			else:
+				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+	# Toggle blessing menu with E
+	if event is InputEventKey and event.physical_keycode == KEY_E and event.pressed and not event.echo:
+		var blessing_menu = inventory_manager.get_node_or_null("HUD/blessing_menu")
+		if blessing_menu:
+			blessing_menu.visible = !blessing_menu.visible
+			if blessing_menu.visible:
+				Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+			else:
+				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 	# Scrolling for inventory
 	if event is InputEventMouseButton:
@@ -205,13 +253,33 @@ func _physics_process(delta: float) -> void:
 				global_position.y = result.position.y + 1.0
 		return
 
+	if shake_intensity > 0:
+		var shake_offset = Vector3(
+			randf_range(-shake_intensity, shake_intensity),
+			randf_range(-shake_intensity, shake_intensity),
+			0
+		)
+		var cam = get_node_or_null("Camera3D")
+		if cam:
+			cam.h_offset = shake_offset.x
+			cam.v_offset = shake_offset.y
+		shake_intensity = move_toward(shake_intensity, 0.0, delta * 5.0)
+	else:
+		var cam = get_node_or_null("Camera3D")
+		if cam:
+			cam.h_offset = 0
+			cam.v_offset = 0
+
 	# 1. Gravity
 	if not is_on_floor():
 		velocity.y -= gravity * delta
+	else:
+		jumps_left = max_jumps
 
 	# 2. Handle Jump
-	if Input.is_action_just_pressed("ui_accept") and is_on_floor():
+	if Input.is_action_just_pressed("ui_accept") and jumps_left > 0:
 		velocity.y = JUMP_VELOCITY
+		jumps_left -= 1
 
 	# 3. WASD Movement (Relative to where you are looking)
 	var input_dir = Input.get_vector("left", "right", "up", "down")
@@ -273,7 +341,7 @@ func _physics_process(delta: float) -> void:
 		var holding_left = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_action_pressed("shoot")
 		
 		# Start priming throw
-		if holding_left and not is_priming_throw:
+		if holding_left and not is_priming_throw and current_grenades > 0:
 			is_priming_throw = true
 			charge_start_time = Time.get_ticks_msec() / 1000.0
 			
@@ -287,8 +355,15 @@ func _physics_process(delta: float) -> void:
 				# Let go -> throw it!
 				is_priming_throw = false
 				trajectory_multimesh.visible = false
-				var scene_path = current_item_data.item_scene.resource_path if current_item_data.item_scene else "res://scenes/player/footbomb.tscn"
-				request_spawn_throwable.rpc_id(1, scene_path, get_node("Camera3D/gun/Muzzle").global_position, -$Camera3D.global_transform.basis.z * primed_throw_force)
+				if current_grenades > 0:
+					current_grenades -= 1
+					var scene_path = current_item_data.item_scene.resource_path if current_item_data.item_scene else "res://scenes/player/footbomb.tscn"
+					request_spawn_throwable.rpc_id(1, scene_path, get_node("Camera3D/gun/Muzzle").global_position, -$Camera3D.global_transform.basis.z * primed_throw_force)
+		elif holding_left and current_grenades <= 0:
+			if Input.is_action_just_pressed("shoot") or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+				# Optional: Play empty click sound
+				if not $SoundFX/dryfireFX.playing:
+					$SoundFX/dryfireFX.play()
 	elif current_item_data and current_item_data.category == ItemData.ItemCategory.TOOL:
 		if time_since_last_shot >= dig_place_cooldown: # Dig/place cooldown
 			if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_action_pressed("shoot"):
@@ -408,18 +483,22 @@ func shoot():
 			hit_normal = ray.get_collision_normal()
 			hit_something = true
 			
-			# Handle hitting players
 			if target and target.has_method("take_damage"):
 				var shooter = multiplayer.get_remote_sender_id()
 				var body_part = ["head","body"][ray.get_collider_shape()]
+				
+				# Calculate proper knockback direction (away from shooter, slightly upwards)
+				var direction = (target.global_position - global_position).normalized()
+				direction.y = 0.2
+				direction = direction.normalized()
 				
 				var auth_id = get_multiplayer_authority()
 				notify_hit_marker.rpc_id(auth_id)
 				
 				if(body_part == "head"):
-					target.take_damage(100, shooter) #headshot
+					target.take_damage(100, shooter, direction) #headshot
 				else:
-					target.take_damage(randi_range(15,30), shooter)
+					target.take_damage(randi_range(15,30), shooter, direction)
 				hit_something = false # Don't place a static bullet hole on damageable entities
 			
 			#hitting voxel
@@ -603,14 +682,41 @@ func update_weapon_mesh():
 	if w_shovel: w_shovel.visible = (current_item_data.category == ItemData.ItemCategory.TOOL)
 	if w_bomb: w_bomb.visible = (current_item_data.category == ItemData.ItemCategory.GRENADE)
 
-func take_damage(amount, shooter_id=0):
+func _on_store_purchase_requested(item_id: String, price: int):
+	if soil_volume >= price:
+		soil_volume -= price
+		match item_id:
+			"ammo":
+				current_ammo = MAX_AMMO
+			"footbomb":
+				current_grenades += 1
+			"shovel_radius":
+				SHOVEL_RADIUS += 0.5
+			"shovel_speed":
+				dig_place_cooldown = max(0.2, dig_place_cooldown - 0.2)
+			"double_jump":
+				max_jumps += 1
+		print("Purchased ", item_id)
+	else:
+		print("Not enough soil volume!")
+
+func take_damage(amount, shooter_id=0, direction: Vector3 = Vector3.ZERO):
 	if is_dead:
 		return
 	health -= amount
 	update_health.rpc_id(str(name).to_int(), health) 
 	print("Player took damage! Health: ", health)
+	
+	if direction != Vector3.ZERO:
+		apply_knockback.rpc_id(str(name).to_int(), direction)
+		
 	if health <= 0:
 		die(shooter_id)
+
+@rpc("any_peer", "call_local")
+func apply_knockback(direction: Vector3):
+	velocity += direction.normalized() * KNOCK_BACK_FORCE # Knockback force
+	shake_intensity = 0.5 # Trigger screen shake
 
 func die(shooter_id=0):
 	is_dead = true

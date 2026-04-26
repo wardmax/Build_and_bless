@@ -80,6 +80,8 @@ func _load_initial_items():
 	var initial_item_paths = [
 		"res://scripts/Item Data/assult_rifle.tres",
 		"res://scripts/Item Data/footbomb.tres",
+		"res://scripts/Item Data/blindness_bomb.tres",
+		"res://scripts/Item Data/fire_bomb.tres",
 		"res://scripts/Item Data/3x3Shovel.tres"
 	]
 	
@@ -118,6 +120,27 @@ func cycle_item(direction: int):
 		ItemData.ItemCategory.GRENADE: sync_grenade_idx = new_idx
 		ItemData.ItemCategory.TOOL: sync_tool_idx = new_idx
 
+	_pulse_next_slot(current_category)
+
+func _pulse_next_slot(cat: ItemData.ItemCategory):
+	var node = category_nodes.get(cat)
+	if not node: return
+	
+	var prefix = ""
+	match cat:
+		ItemData.ItemCategory.WEAPON: prefix = "weapon"
+		ItemData.ItemCategory.GRENADE: prefix = "throwable"
+		ItemData.ItemCategory.TOOL: prefix = "tool"
+		
+	var next_slot = node.get_node_or_null("next_" + prefix)
+	if next_slot and next_slot.visible and next_slot.modulate.a > 0.0:
+		# Create a tween for the fade effect
+		var tween = create_tween()
+		# Briefly increase opacity
+		next_slot.modulate.a = 1.0
+		# Tween back down to base transparency (0.5)
+		tween.tween_property(next_slot, "modulate:a", 0.5, 0.3).set_trans(Tween.TRANS_SINE)
+
 func _emit_current_item():
 	var items = categories[current_category]
 	if items.size() > 0:
@@ -142,25 +165,44 @@ func update_ui():
 			ItemData.ItemCategory.GRENADE: prefix = "throwable"
 			ItemData.ItemCategory.TOOL: prefix = "tool"
 			
-		_update_slot(node.get_node("previous_" + prefix), items, idx - 1)
-		_update_slot(node.get_node("active_" + prefix), items, idx)
-		_update_slot(node.get_node("next_" + prefix), items, idx + 1)
+		var prev_node = node.get_node_or_null("previous_" + prefix)
+		var active_node = node.get_node_or_null("active_" + prefix)
+		var next_node = node.get_node_or_null("next_" + prefix)
+		
+		if prev_node: _update_slot(prev_node, items, idx - 1, false)
+		if active_node: _update_slot(active_node, items, idx, true)
+		if next_node: _update_slot(next_node, items, idx + 1, false)
 
-func _update_slot(slot_node: Control, items: Array, index: int):
+func _update_slot(slot_node: Control, items: Array, index: int, is_active: bool = false):
+	if not slot_node: return
+	
 	var texture_rect = slot_node.get_node_or_null("TextureRect")
 	if not texture_rect: return
 	
 	if items.size() == 0:
 		texture_rect.texture = null
-		slot_node.visible = false
+		slot_node.modulate.a = 0.0 # Keep layout size but invisible
+		return
+		
+	if items.size() == 1 and not is_active:
+		texture_rect.texture = null
+		slot_node.modulate.a = 0.0 # Hide previous/next clones when only 1 item
 		return
 	
 	slot_node.visible = true
+	# Reset alpha in case it was hidden previously (active slot is 1.0, prev/next maintain their base modulate set in inspector)
+	if is_active:
+		slot_node.modulate.a = 1.0
+	elif items.size() > 1:
+		slot_node.modulate.a = 0.5 # Default base transparency
+		
 	var actual_idx = (index + items.size()) % items.size()
 	var item = items[actual_idx]
 	texture_rect.texture = item.icon
 
-func update_hud_stats(ammo: int, soil: float):
+func update_hud_stats(ammo: int, grenades: int, soil: float):
 	if not is_multiplayer_authority(): return
 	$HUD/StatsContainer/AmmoLabel.text = "Ammo: " + str(ammo)
+	if has_node("HUD/StatsContainer/GrenadesLabel"):
+		$HUD/StatsContainer/GrenadesLabel.text = "Grenades: " + str(grenades)
 	$HUD/StatsContainer/SoilLabel.text = "Soil: " + str(snapped(soil, 0.1))

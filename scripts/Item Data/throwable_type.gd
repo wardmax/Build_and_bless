@@ -8,12 +8,12 @@ class_name ThrowableType
 @export var explosion_damage: int = 50
 
 @export_group("Visuals")
+@export var bomb_color: Color = Color(0.22, 0.11, 0.02)
 @export var particle_color: Color = Color(1, 0.5, 0)
 @export var particle_emission: Color = Color(1, 0.3, 0)
 @export var particle_count: int = 30
 @export var particle_size: float = 0.2
 @export var particle_lifetime: float = 1.0
-
 @export_group("Effects")
 @export var effect_id: String = "default" # e.g., "fire", "blindness", "wind"
 @export var effect_intensity: float = 1.0

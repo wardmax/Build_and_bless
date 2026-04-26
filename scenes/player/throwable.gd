@@ -16,11 +16,31 @@ var last_hit_terrain: NodePath
 
 func _ready():
 	# Use type_data properties if available
+	if not type_data:
+		type_data = load("res://scripts/Item Data/footbomb_default.tres")
+		
 	if type_data:
 		explosion_radius = type_data.explosion_radius
 		fuse_time = type_data.fuse_time
 		destroy_voxels = type_data.destroy_voxels
 		shrapnel_count = type_data.particle_count
+		
+		# Apply bomb color
+		var mesh_instance = get_node_or_null("MeshInstance3D")
+		if mesh_instance:
+			var mat = mesh_instance.get_surface_override_material(0)
+			if not mat:
+				var base_mat = mesh_instance.mesh.surface_get_material(0)
+				if base_mat:
+					mat = base_mat.duplicate()
+				else:
+					mat = StandardMaterial3D.new()
+				mesh_instance.set_surface_override_material(0, mat)
+			
+			if "bomb_color" in type_data:
+				mat.albedo_color = type_data.bomb_color
+			else:
+				mat.albedo_color = type_data.particle_color
 		
 	if multiplayer.is_server():
 		contact_monitor = true
