@@ -25,7 +25,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -48.87755, 27.784302, 25.8582
 view_distance = 150
 
 [node name="Marker3D2" type="Marker3D" parent="PlayerSpawn"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 49.96875, 27.784302, 25.85825)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.107666, 27.784302, 25.85825)
 
 [node name="VoxelViewer" type="VoxelViewer" parent="PlayerSpawn/Marker3D2"]
 view_distance = 150
