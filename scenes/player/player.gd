@@ -737,11 +737,11 @@ func take_damage(amount, shooter_id=0, direction: Vector3 = Vector3.ZERO):
 	if is_dead:
 		return
 	health -= amount
-	update_health.rpc_id(str(name).to_int(), health) 
+	update_health.rpc(health) 
 	print("Player took damage! Health: ", health)
 	
 	if direction != Vector3.ZERO:
-		apply_knockback.rpc_id(str(name).to_int(), direction)
+		apply_knockback.rpc(direction)
 		
 	if health <= 0:
 		die(shooter_id)
