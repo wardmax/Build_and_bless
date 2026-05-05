@@ -12,7 +12,7 @@ extends CharacterBody3D
 @export var SHOVEL_RADIUS: float = 1
 @export var BULLET_SPREAD = 2 # Spread amount at the raycast's max distance
 var KNOCK_BACK_FORCE = 5.0
-var dig_place_cooldown = 1
+var dig_place_cooldown = .25
 
 var current_item_data: ItemData
 var is_priming_throw: bool = false
@@ -112,6 +112,9 @@ func _setup_authority():
 	if has_node("MultiplayerSynchronizer"):
 		$MultiplayerSynchronizer.set_multiplayer_authority(id)
 		
+	if inventory_manager and not inventory_manager.item_equipped.is_connected(_on_item_equipped):
+		inventory_manager.item_equipped.connect(_on_item_equipped)
+		
 	if is_multiplayer_authority():
 		$PlayerStats/ProgressBar.value=health
 		$PlayerStats.show() # Only I see my bar
@@ -132,17 +135,12 @@ func _setup_authority():
 		if not multiplayer.is_server():
 			request_spawn_point.rpc_id(1)
 		
-		# Inventory setup
-		inventory_manager.item_equipped.connect(_on_item_equipped)
-		
 		# Connect blessing menu
 		var blessing_menu = inventory_manager.get_node_or_null("HUD/blessing_menu")
 		if blessing_menu:
 			blessing_menu.purchase_requested.connect(_on_store_purchase_requested)
 	elif multiplayer.is_server():
 		$PlayerStats.hide() # Only I see my bar
-		# Server needs to keep track of all players' items to validate shooting/actions
-		inventory_manager.item_equipped.connect(_on_item_equipped)
 	else:
 		$PlayerStats.hide() # Only I see my bar
 		if has_node("Camera3D"):
@@ -221,6 +219,13 @@ func _unhandled_input(event):
 			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 				inventory_manager.cycle_item(1)
 
+	# Category hotkeys — use event so it only fires once per press
+	if event is InputEventKey and event.pressed and not event.echo:
+		match event.physical_keycode:
+			KEY_1: inventory_manager.change_category(0)
+			KEY_2: inventory_manager.change_category(1)
+			KEY_3: inventory_manager.change_category(2)
+
 @export var health = 100:
 	set(v):
 		health = v
@@ -296,14 +301,6 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
-	# Weapon Category Switching
-	if Input.is_physical_key_pressed(KEY_1):
-		inventory_manager.change_category(0) # Weapons
-	elif Input.is_physical_key_pressed(KEY_2):
-		inventory_manager.change_category(1) # Grenades
-	elif Input.is_physical_key_pressed(KEY_3):
-		inventory_manager.change_category(2) # Tools
-
 	# 4. Scoreboard Toggling
 	if Input.is_physical_key_pressed(KEY_TAB):
 		var sb = get_tree().root.find_child("Scoreboard", true, false)
@@ -315,9 +312,10 @@ func _physics_process(delta: float) -> void:
 	# 5. Shooting & Reloading
 	time_since_last_shot += delta
 	
-	# Procedural Continuous Recoil
+	# Procedural Continuous Recoil (automatic weapons only)
 	var is_shooting = Input.is_action_pressed("shoot") and not is_reloading and current_ammo > 0
-	if is_shooting:
+	var is_auto = current_item_data is WeaponData and current_item_data.is_automatic
+	if is_shooting and is_auto:
 		var time = Time.get_ticks_msec() / 1000.0
 		# Pitch up by ~4.5 degrees (0.08 radians) and add a tiny vertical vibration
 		target_gun_recoil_rotation.x = 0.08 + sin(time * 45.0) * 0.01
@@ -333,9 +331,9 @@ func _physics_process(delta: float) -> void:
 		$Camera3D/gun.rotation = gun_base_rotation + gun_recoil_rotation
 	
 	if Input.is_action_just_pressed("reload") or Input.is_physical_key_pressed(KEY_R):
-		if current_ammo < MAX_AMMO and not is_reloading and current_item_data and current_item_data.category == ItemData.ItemCategory.WEAPON:
+		if current_item_data is WeaponData and current_ammo < current_item_data.max_ammo and not is_reloading:
 			$SoundFX/reloadFX.play()
-			reload_weapon()
+			reload_weapon(current_item_data.reload_time, current_item_data.max_ammo)
 			
 	if current_item_data and current_item_data.category == ItemData.ItemCategory.GRENADE:
 		var holding_left = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_action_pressed("shoot")
@@ -358,7 +356,10 @@ func _physics_process(delta: float) -> void:
 				if current_grenades > 0:
 					current_grenades -= 1
 					var scene_path = current_item_data.item_scene.resource_path if current_item_data.item_scene else "res://scenes/player/footbomb.tscn"
-					request_spawn_throwable.rpc_id(1, scene_path, get_node("Camera3D/gun/Muzzle").global_position, -$Camera3D.global_transform.basis.z * primed_throw_force)
+					var type_path = ""
+					if current_item_data is GrenadeData and current_item_data.throwable_type:
+						type_path = current_item_data.throwable_type.resource_path
+					request_spawn_throwable.rpc_id(1, scene_path, get_node("Camera3D/gun/Muzzle").global_position, -$Camera3D.global_transform.basis.z * primed_throw_force, type_path)
 		elif holding_left and current_grenades <= 0:
 			if Input.is_action_just_pressed("shoot") or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 				# Optional: Play empty click sound
@@ -381,18 +382,21 @@ func _physics_process(delta: float) -> void:
 					if Input.is_action_just_pressed("aim") or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
 						$SoundFX/dryfireFX.play()
 	else:
-		if Input.is_action_pressed("shoot") and not is_reloading:
-			if time_since_last_shot >= FIRE_RATE:
-				if current_ammo > 0:
-					time_since_last_shot = 0.0
-					current_ammo -= 1
-					shoot.rpc_id(1) # Send to server
-					
-					$SoundFX/shootFX.pitch_scale = randf_range(0.9, 1.2)
-					$SoundFX/shootFX.play()
-				elif Input.is_action_just_pressed("shoot"):
-					print("Click! Out of ammo.")
-					$SoundFX/dryfireFX.play()
+		if not is_reloading and current_item_data is WeaponData:
+			var shoot_pressed = Input.is_action_pressed("shoot") if current_item_data.is_automatic \
+				else Input.is_action_just_pressed("shoot")
+			if shoot_pressed:
+				if time_since_last_shot >= current_item_data.fire_rate:
+					if current_ammo > 0:
+						time_since_last_shot = 0.0
+						current_ammo -= 1
+						shoot.rpc_id(1) # Send to server
+						
+						$SoundFX/shootFX.pitch_scale = randf_range(0.9, 1.2)
+						$SoundFX/shootFX.play()
+					elif Input.is_action_just_pressed("shoot"):
+						print("Click! Out of ammo.")
+						$SoundFX/dryfireFX.play()
 
 func draw_trajectory():
 	trajectory_multimesh.visible = true
@@ -432,11 +436,11 @@ func draw_trajectory():
 		current_pos = next_pos
 		current_vel = next_vel
 
-func reload_weapon():
+func reload_weapon(reload_time: float, max_ammo: int):
 	is_reloading = true
 	print("Reloading...")
-	await get_tree().create_timer(RELOAD_TIME).timeout
-	current_ammo = MAX_AMMO
+	await get_tree().create_timer(reload_time).timeout
+	current_ammo = max_ammo
 	is_reloading = false
 	print("Reload complete!")
 
@@ -446,10 +450,15 @@ func shoot():
 	if not multiplayer.is_server():
 		return
 		
+	var active_weapon = current_item_data as WeaponData
+	var fire_rate = active_weapon.fire_rate if active_weapon else 0.1
+	var bullet_spread = active_weapon.bullet_spread if active_weapon else 2.0
+	var damage = active_weapon.damage if active_weapon else 20
+		
 	# Track consecutive shots for recoil control
 	var current_time = Time.get_ticks_msec()
 	# If it's been more than 2.5x the fire rate since the last shot, reset consecutive shots
-	if current_time - server_last_shot_time > (FIRE_RATE * 1000 * 2.5):
+	if current_time - server_last_shot_time > (fire_rate * 1000 * 2.5):
 		consecutive_shots = 0
 		
 	server_last_shot_time = current_time
@@ -468,8 +477,8 @@ func shoot():
 			# Ray points along local -Y (0, -1500, 0), so we spread across X and Z.
 			# Multiply by a factor so BULLET_SPREAD represents the spread amount at 50 meters.
 			var spread_factor = abs(ray.target_position.y) / 50.0 
-			ray.target_position.x += randf_range(-BULLET_SPREAD, BULLET_SPREAD) * spread_factor
-			ray.target_position.z += randf_range(-BULLET_SPREAD, BULLET_SPREAD) * spread_factor
+			ray.target_position.x += randf_range(-bullet_spread, bullet_spread) * spread_factor
+			ray.target_position.z += randf_range(-bullet_spread, bullet_spread) * spread_factor
 		
 		ray.force_raycast_update()
 		
@@ -496,9 +505,9 @@ func shoot():
 				notify_hit_marker.rpc_id(auth_id)
 				
 				if(body_part == "head"):
-					target.take_damage(100, shooter, direction) #headshot
+					target.take_damage(damage * 3, shooter, direction) #headshot
 				else:
-					target.take_damage(randi_range(15,30), shooter, direction)
+					target.take_damage(damage, shooter, direction)
 				hit_something = false # Don't place a static bullet hole on damageable entities
 			
 			#hitting voxel
@@ -539,19 +548,23 @@ func destroy_voxel_sphere(terrain_path: NodePath, world_pos: Vector3, radius: fl
 	vt.do_sphere(local_pos, local_radius)
 
 @rpc("any_peer", "call_local")
-func request_spawn_throwable(scene_path: String, pos: Vector3, impulse: Vector3):
+func request_spawn_throwable(scene_path: String, pos: Vector3, impulse: Vector3, type_path: String = ""):
 	if not multiplayer.is_server():
 		return
 	var b_name = "Throw_" + str(Time.get_ticks_usec()) + "_" + str(randi() % 1000)
-	spawn_throwable.rpc(scene_path, pos, impulse, b_name)
+	spawn_throwable.rpc(scene_path, pos, impulse, b_name, type_path)
 
 @rpc("any_peer", "call_local")
-func spawn_throwable(scene_path: String, pos: Vector3, impulse: Vector3, b_name: String = ""):
+func spawn_throwable(scene_path: String, pos: Vector3, impulse: Vector3, b_name: String = "", type_path: String = ""):
 	var bomb_scene = load(scene_path)
 	if bomb_scene:
 		var bomb = bomb_scene.instantiate()
 		if b_name != "":
 			bomb.name = b_name
+		# Apply type_data BEFORE add_child so throwable._ready() picks it up
+		if type_path != "" and bomb.get("type_data") != null or type_path != "":
+			if type_path != "":
+				bomb.set("type_data", load(type_path))
 		get_tree().root.add_child(bomb)
 		bomb.global_position = pos
 		
@@ -594,8 +607,12 @@ func create_tracer(from: Vector3, to: Vector3):
 	
 	if has_node("Camera3D/gun/AnimationPlayer"):
 		var anim = $Camera3D/gun/AnimationPlayer
-		anim.stop()
-		anim.play("recoil")
+		var anim_name = "recoil"
+		if current_item_data is WeaponData and current_item_data.recoil_animation != "":
+			anim_name = current_item_data.recoil_animation
+		if anim.has_animation(anim_name):
+			anim.stop()
+			anim.play(anim_name)
 
 @rpc("any_peer", "call_local")
 func shovel_action(is_digging: bool):
@@ -623,7 +640,10 @@ func shovel_action(is_digging: bool):
 				
 		update_soil_volume.rpc_id(multiplayer.get_remote_sender_id(), soil_volume)
 		dig_sphere_synced.rpc(target.get_path(), world_pos, is_digging)
-
+	else:
+		var target = ray.get_collider()
+		print(target)
+	
 @rpc("any_peer", "call_local")
 func update_soil_volume(amount: float):
 	soil_volume = amount
@@ -678,7 +698,11 @@ func update_weapon_mesh():
 	
 	if current_item_data == null: return
 	
-	if w_gun: w_gun.visible = (current_item_data.category == ItemData.ItemCategory.WEAPON)
+	if w_gun: 
+		w_gun.visible = (current_item_data.category == ItemData.ItemCategory.WEAPON)
+		if w_gun.visible and current_item_data is WeaponData and w_gun.has_method("set_weapon_data"):
+			w_gun.set_weapon_data(current_item_data)
+			
 	if w_shovel: w_shovel.visible = (current_item_data.category == ItemData.ItemCategory.TOOL)
 	if w_bomb: w_bomb.visible = (current_item_data.category == ItemData.ItemCategory.GRENADE)
 
@@ -687,9 +711,18 @@ func _on_store_purchase_requested(item_id: String, price: int):
 		soil_volume -= price
 		match item_id:
 			"ammo":
-				current_ammo = MAX_AMMO
+				if current_item_data is WeaponData:
+					current_ammo = current_item_data.max_ammo
 			"footbomb":
 				current_grenades += 1
+			"firebomb":
+				current_grenades += 1
+				# Switch to the firebomb in inventory if we have it
+				var grenades = inventory_manager.categories[ItemData.ItemCategory.GRENADE]
+				for i in range(grenades.size()):
+					if grenades[i].item_name == "Firebomb":
+						inventory_manager.sync_grenade_idx = i
+						break
 			"shovel_radius":
 				SHOVEL_RADIUS += 0.5
 			"shovel_speed":

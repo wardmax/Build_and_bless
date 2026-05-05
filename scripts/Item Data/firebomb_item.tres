@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="GrenadeData" load_steps=5 format=3 uid="uid://dqridfyh0vqr5"]
+
+[ext_resource type="Script" uid="uid://ct5qrced4jvs0" path="res://scripts/Item Data/grenade_data.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://cghwctap2qvn6" path="res://scripts/Item Data/Item_Icons/footbomb_fire.png" id="1_ttgeu"]
+[ext_resource type="Script" uid="uid://1tckus4t32pk" path="res://scripts/Item Data/throwable_type.gd" id="3_ttgeu"]
+
+[sub_resource type="Resource" id="Resource_fskgt"]
+script = ExtResource("3_ttgeu")
+explosion_radius = 5.0
+destroy_voxels = false
+explosion_damage = 30
+bomb_color = Color(0.7550252, 0.02308245, 0.08880911, 1)
+particle_color = Color(1, 0.2, 0, 1)
+particle_emission = Color(1, 0, 0, 1)
+particle_count = 60
+particle_size = 0.3
+particle_lifetime = 1.5
+effect_id = "fire"
+effect_intensity = 2.0
+effect_duration = 5.0
+
+[resource]
+script = ExtResource("1_script")
+throwable_type = SubResource("Resource_fskgt")
+item_name = "Firebomb"
+icon = ExtResource("1_ttgeu")
+category = 1

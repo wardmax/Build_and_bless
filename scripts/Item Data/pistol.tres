@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=4 format=3 uid="uid://cb8kjqinn6uxp"]
+
+[ext_resource type="Texture2D" uid="uid://b1eyact2ctjvi" path="res://scripts/Item Data/Item_Icons/pistol.png" id="1_l8jos"]
+[ext_resource type="Script" uid="uid://dc0v7wfy8783x" path="res://scripts/Item Data/weapon_data.gd" id="2_weap"]
+[ext_resource type="ArrayMesh" uid="uid://cglx8b831w40g" path="res://asssets/Models/smith.obj" id="3_mesh"]
+
+[resource]
+script = ExtResource("2_weap")
+weapon_mesh = ExtResource("3_mesh")
+position_offset = Vector3(0.3, 0.4, -0.75)
+damage = 30
+fire_rate = 0.25
+is_automatic = false
+max_ammo = 8
+reload_time = 1.5
+bullet_spread = 1.0
+item_name = "Smith Pistol"
+icon = ExtResource("1_l8jos")

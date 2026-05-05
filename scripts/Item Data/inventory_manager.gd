@@ -79,7 +79,9 @@ func _load_initial_items():
 	# In a real game, this would be populated from a save or start inventory
 	var initial_item_paths = [
 		"res://scripts/Item Data/assult_rifle.tres",
+		"res://scripts/Item Data/pistol.tres",
 		"res://scripts/Item Data/footbomb.tres",
+		"res://scripts/Item Data/firebomb_item.tres",
 		"res://scripts/Item Data/blindness_bomb.tres",
 		"res://scripts/Item Data/fire_bomb.tres",
 		"res://scripts/Item Data/3x3Shovel.tres"

@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3 uid="uid://bhopc7bcxcm0a"]
+[gd_scene load_steps=6 format=3 uid="uid://bhopc7bcxcm0a"]
 
 [ext_resource type="Script" uid="uid://b4hnqpxflgvny" path="res://scenes/player/throwable.gd" id="1_script"]
 [ext_resource type="ArrayMesh" uid="uid://be1xconm5ovau" path="res://asssets/Models/football.obj" id="2_oeoxc"]
+[ext_resource type="AudioStream" uid="uid://b8b4ymcym2w5a" path="res://asssets/Audio/explosion_small_01.wav" id="3_a4h6p"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1h48f"]
 radius = 0.11
@@ -23,3 +24,6 @@ shape = SubResource("CapsuleShape3D_1h48f")
 transform = Transform3D(-4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0, 0, 1, 0, 0, 0)
 mesh = ExtResource("2_oeoxc")
 surface_material_override/0 = SubResource("StandardMaterial3D_a4h6p")
+
+[node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="."]
+stream = ExtResource("3_a4h6p")

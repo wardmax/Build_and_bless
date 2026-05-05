@@ -76,7 +76,6 @@ func _explode():
 	if exploded or not multiplayer.is_server():
 		return
 	exploded = true
-	
 	# Server-side logic
 	_trigger_explosion()
 	_apply_custom_effects()
@@ -86,7 +85,17 @@ func _explode():
 @rpc("call_local", "authority", "reliable")
 func sync_explode():
 	_spawn_explosion_particles()
-	# Optional: play sound here
+	
+	if has_node("AudioStreamPlayer3D"):
+		var audio = $AudioStreamPlayer3D
+		remove_child(audio)
+		var target_parent = get_tree().current_scene
+		if not target_parent: target_parent = get_tree().root
+		target_parent.add_child(audio)
+		audio.global_position = global_position
+		audio.play()
+		audio.finished.connect(audio.queue_free)
+		
 	queue_free()
 
 func _trigger_explosion():
@@ -98,6 +107,32 @@ func _trigger_explosion():
 				terrain_path = terrain.get_path()
 		
 		_find_player_and_explode(get_tree().root, terrain_path)
+
+	_apply_explosion_damage()
+
+func _apply_explosion_damage():
+	var damage = 50
+	if type_data and "explosion_damage" in type_data:
+		damage = type_data.explosion_damage
+
+	# Search all nodes in the scene for anything that can take damage
+	var candidates = get_tree().root.find_children("*", "CharacterBody3D", true, false)
+	for node in candidates:
+		if not node.has_method("take_damage"):
+			continue
+		var dist = node.global_position.distance_to(global_position)
+		if dist <= explosion_radius:
+			# Scale damage: full at centre, zero at the edge
+			var damage_scale = 1.0 - clamp(dist / explosion_radius, 0.0, 1.0)
+			var scaled_damage = int(damage * damage_scale)
+			if scaled_damage <= 0:
+				continue
+			# Knock the player away from the explosion, slightly upward
+			var direction = (node.global_position - global_position)
+			direction.y += explosion_radius * 0.3
+			direction = direction.normalized()
+			node.take_damage(scaled_damage, 0, direction)
+
 
 func _apply_custom_effects():
 	if not type_data:
@@ -125,66 +160,77 @@ func _find_player_and_explode(node: Node, terrain_path: NodePath) -> bool:
 	for child in node.get_children():
 		if _find_player_and_explode(child, terrain_path):
 			return true
+	
 	return false
 
 func _spawn_explosion_particles():
-	var particles = CPUParticles3D.new()
-	# Add to the current scene instead of root for better tracking
-	var target_parent = get_tree().current_scene
-	if not target_parent: target_parent = get_tree().root
-	target_parent.add_child(particles)
-	
-	particles.global_position = global_position
-	
-	# Default colors
-	var p_color = Color(1, 0.5, 0)
+	# Read values from type_data or fall back to defaults
+	var p_color    = Color(1, 0.5, 0)
 	var p_emission = Color(1, 0.3, 0)
-	var p_count = shrapnel_count
-	var p_size = 0.2
+	var p_count    = shrapnel_count
+	var p_size     = 0.2
 	var p_lifetime = 1.0
-	
-	# Override with type_data if present
+
 	if type_data:
-		p_color = type_data.particle_color
+		p_color    = type_data.particle_color
 		p_emission = type_data.particle_emission
-		p_count = type_data.particle_count
-		p_size = type_data.particle_size
+		p_count    = type_data.particle_count
+		p_size     = type_data.particle_size
 		p_lifetime = type_data.particle_lifetime
 
-	# Configure explosion look
-	particles.emitting = false
-	particles.amount = p_count
-	particles.one_shot = true
-	particles.explosiveness = 1.0
-	particles.lifetime = p_lifetime
-	
-	# Shape
-	particles.spread = 180.0
-	particles.gravity = Vector3(0, -4, 0)
-	particles.initial_velocity_min = 5.0
-	particles.initial_velocity_max = 12.0
-	
-	# Appearance
-	var mesh = SphereMesh.new()
-	mesh.radius = p_size
-	mesh.height = p_size * 2.0
-	particles.mesh = mesh
-	
-	var mat = StandardMaterial3D.new()
-	mat.albedo_color = p_color
-	mat.emission_enabled = true
-	mat.emission = p_emission
-	mat.emission_energy_multiplier = 3.0 # Brighter emission
-	particles.material_override = mat
-	
-	# Scale curve (shrink over time)
-	var curve = Curve.new()
-	curve.add_point(Vector2(0, 1))
-	curve.add_point(Vector2(1, 0))
-	particles.scale_amount_curve = curve
-	
-	# Start emitting
+	# --- Process Material (controls movement & color) ---
+	var process_mat = ParticleProcessMaterial.new()
+	process_mat.direction          = Vector3(0, 1, 0)
+	process_mat.spread             = 180.0
+	process_mat.gravity            = Vector3(0, -10, 0)
+	process_mat.initial_velocity_min = 5.0
+	process_mat.initial_velocity_max = 12.0
+	process_mat.scale_min          = p_size
+	process_mat.scale_max          = p_size * 1.5
+
+	# Fade from bright emission colour → transparent over lifetime
+	var gradient = Gradient.new()
+	gradient.set_color(0, Color(p_emission.r, p_emission.g, p_emission.b, 1.0))
+	gradient.add_point(1.0, Color(p_color.r, p_color.g, p_color.b, 0.0))
+	var grad_tex = GradientTexture1D.new()
+	grad_tex.gradient = gradient
+	process_mat.color_ramp = grad_tex
+
+	# --- Draw mesh (billboard quad looks great for sparks) ---
+	var draw_mesh = QuadMesh.new()
+	draw_mesh.size = Vector2(p_size, p_size)
+
+	var draw_mat = StandardMaterial3D.new()
+	draw_mat.transparency           = BaseMaterial3D.TRANSPARENCY_ALPHA
+	draw_mat.shading_mode           = BaseMaterial3D.SHADING_MODE_UNSHADED
+	draw_mat.billboard_mode         = BaseMaterial3D.BILLBOARD_ENABLED
+	draw_mat.albedo_color           = p_color
+	draw_mat.emission_enabled       = true
+	draw_mat.emission               = p_emission
+	draw_mat.emission_energy_multiplier = 4.0
+	draw_mat.vertex_color_use_as_albedo = true  # lets the color ramp tint the quads
+	draw_mesh.material = draw_mat
+
+	# --- GPUParticles3D node ---
+	var particles = GPUParticles3D.new()
+	particles.amount          = p_count
+	particles.lifetime        = p_lifetime
+	particles.one_shot        = true
+	particles.explosiveness   = 1.0
+	particles.randomness      = 0.2
+	particles.process_material = process_mat
+	particles.draw_passes     = 1
+	particles.set_draw_pass_mesh(0, draw_mesh)
+	# Bounding box large enough to never cull early
+	particles.visibility_aabb  = AABB(Vector3(-20, -20, -20), Vector3(40, 40, 40))
+
+	# Add to scene AFTER full configuration so the first frame is correct
+	var target_parent = get_tree().current_scene
+	if not target_parent:
+		target_parent = get_tree().root
+	target_parent.add_child(particles)
+	particles.global_position = global_position
 	particles.emitting = true
-	
-	# Auto-cleanup
+
+	# Auto-cleanup once the burst is done
 	get_tree().create_timer(p_lifetime + 0.5).timeout.connect(particles.queue_free)

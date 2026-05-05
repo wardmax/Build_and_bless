@@ -1,6 +1,7 @@
-[gd_scene load_steps=4 format=3 uid="uid://dcf11oq30ceny"]
+[gd_scene load_steps=5 format=3 uid="uid://dcf11oq30ceny"]
 
 [ext_resource type="ArrayMesh" uid="uid://c35djxilk2jiq" path="res://asssets/Models/ak47.obj" id="1_ae5e1"]
+[ext_resource type="Script" uid="uid://b0g2u07lwbmyq" path="res://scenes/player/gun.gd" id="2_script"]
 
 [sub_resource type="Animation" id="Animation_recoil"]
 resource_name = "recoil"
@@ -13,16 +14,13 @@ _data = {
 }
 
 [node name="gun" type="Node3D"]
+script = ExtResource("2_script")
 
 [node name="ak48" type="MeshInstance3D" parent="."]
 mesh = ExtResource("1_ae5e1")
 
 [node name="Muzzle" type="Marker3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.29850578, 0.5213077, -2.8728418)
-
-[node name="RayCast3D" type="RayCast3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0.31336933, 0.52250826, -1.8439354)
-target_position = Vector3(0, -500, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.29850578, 0.5213077, -2.4278772)
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {

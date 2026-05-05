@@ -5,6 +5,7 @@ signal purchase_requested(item_id: String, price: int)
 @export var store_items: Array = [
 	{ "id": "ammo", "name": "Ammo", "price": 10, "icon": null },
 	{ "id": "footbomb", "name": "Footbomb", "price": 20, "icon": null },
+	{ "id": "firebomb", "name": "Firebomb", "price": 30, "icon": null },
 	{ "id": "shovel_radius", "name": "Increase Shovel Radius", "price": 50, "icon": null },
 	{ "id": "shovel_speed", "name": "Increase Shovel Speed", "price": 10, "icon": null },
 	{ "id": "double_jump", "name": "Double Jump", "price": 10, "icon": null }
