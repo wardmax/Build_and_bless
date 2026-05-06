@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://c7jxb55veskqd"]
+[gd_scene load_steps=7 format=3 uid="uid://c7jxb55veskqd"]
 
 [ext_resource type="PackedScene" uid="uid://btjx4a4g25xj3" path="res://scenes/network/multiplayer_manager.tscn" id="1_3iwug"]
 [ext_resource type="PackedScene" uid="uid://cys03q34jt762" path="res://scenes/menus/in_game_menu.tscn" id="2_r5nxa"]
 [ext_resource type="PackedScene" uid="uid://baq8wujtrjp3a" path="res://scenes/world/world.tscn" id="3_h30v7"]
 [ext_resource type="PackedScene" uid="uid://sb2x1" path="res://scenes/ui/scoreboard.tscn" id="4_score"]
 [ext_resource type="PackedScene" uid="uid://cax2obby" path="res://scenes/ui/lobby.tscn" id="5_lobby"]
+[ext_resource type="PackedScene" uid="uid://d14f8u2m7dav3" path="res://scenes/world/supply_crate.tscn" id="6_p57ef"]
 
 [node name="Game" type="Node3D"]
 
@@ -41,3 +42,6 @@ view_distance = 150
 [node name="Scoreboard" parent="." instance=ExtResource("4_score")]
 
 [node name="Lobby" parent="." instance=ExtResource("5_lobby")]
+
+[node name="SupplyCrate" parent="." instance=ExtResource("6_p57ef")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 68.97905, 0)

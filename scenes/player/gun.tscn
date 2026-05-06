@@ -26,3 +26,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.29850578, 0.5213077, -2.427
 libraries = {
 &"": SubResource("AnimationLibrary_gun")
 }
+
+[node name="SprayPattern" type="Line2D" parent="."]
+points = PackedVector2Array(0, -1, -5, -5, -8, -12, -8, -19, -8, -27, -5, -33, -1, -38, 4, -44, 6, -47, 7, -53, 7, -57, 3, -63, -2, -68, -5, -76, -8, -85, -7, -89, -4, -97, -1, -100, 1, -104, 6, -110, 6, -117)

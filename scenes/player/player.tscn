@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=4 uid="uid://xjygpllvas2q"]
+[gd_scene load_steps=21 format=4 uid="uid://xjygpllvas2q"]
 
 [ext_resource type="Script" uid="uid://s4je8q1h3ruf" path="res://scenes/player/player.gd" id="1_dovo2"]
 [ext_resource type="PackedScene" uid="uid://dcf11oq30ceny" path="res://scenes/player/gun.tscn" id="3_gmlin"]
@@ -9,6 +9,7 @@
 [ext_resource type="AudioStream" uid="uid://bddmswgsnuglu" path="res://asssets/Audio/gun_rifle_dry_fire_01.wav" id="6_qek5x"]
 [ext_resource type="Script" uid="uid://cdte2ipf7gfvb" path="res://scenes/player/cross_hair.gd" id="7_0owmy"]
 [ext_resource type="AudioStream" uid="uid://cn23y3n11ifnv" path="res://asssets/Audio/snowball_hit_impact_10.wav" id="9_h17s1"]
+[ext_resource type="PackedScene" uid="uid://b8amjyesbd87u" path="res://asssets/Models/Rifle Run(1).fbx" id="11_fm80t"]
 [ext_resource type="PackedScene" uid="uid://51vflldx3b1j" path="res://scenes/ui/inventory_manager.tscn" id="11_je7p5"]
 
 [sub_resource type="GDScript" id="GDScript_h17s1"]
@@ -230,6 +231,12 @@ properties/2/replication_mode = 1
 properties/3/path = NodePath("PlayerStats/ProgressBar:value")
 properties/3/spawn = true
 properties/3/replication_mode = 1
+properties/4/path = NodePath("Rifle Run(1)/AnimationPlayer:current_animation")
+properties/4/spawn = true
+properties/4/replication_mode = 1
+properties/5/path = NodePath("Skeleton3D2:visible")
+properties/5/spawn = true
+properties/5/replication_mode = 1
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_je7p5"]
 bg_color = Color(0.10927788, 0.39663184, 0.25383613, 1)
@@ -784,3 +791,64 @@ offset_left = -25.0
 offset_right = 180.0
 offset_bottom = 27.0
 theme = SubResource("Theme_je7p5")
+
+[node name="Rifle Run(1)" parent="." instance=ExtResource("11_fm80t")]
+
+[node name="Skeleton3D" parent="Rifle Run(1)" index="0"]
+bones/0/position = Vector3(-0.0015669719, 0.83355284, 0.0079679955)
+bones/0/rotation = Quaternion(0.0830552, -0.12142408, -0.013077619, 0.98903346)
+bones/1/rotation = Quaternion(0.017460685, -0.030662848, 0.018843895, 0.9991996)
+bones/2/rotation = Quaternion(0.029391864, -0.008461489, -0.0019666678, 0.9995302)
+bones/3/rotation = Quaternion(0.02932061, -0.008600802, -0.0020654306, 0.9995309)
+bones/4/rotation = Quaternion(0.09745291, 0.030740067, 0.014174091, 0.9946643)
+bones/5/rotation = Quaternion(0.037200745, 0.03154001, 0.012291628, 0.9987344)
+bones/7/rotation = Quaternion(-0.5656972, -0.4441938, 0.4625948, -0.518348)
+bones/8/rotation = Quaternion(0.22495703, -0.4256248, 0.5404991, 0.689999)
+bones/9/rotation = Quaternion(0.030932566, -0.0026912587, 0.2593688, 0.9652791)
+bones/10/rotation = Quaternion(0.06469964, -0.8747366, -0.16829817, 0.4498063)
+bones/11/rotation = Quaternion(0.19459918, 0.09863762, 0.14276522, 0.96541184)
+bones/12/rotation = Quaternion(0.016170684, 0.16562551, -0.014703066, 0.9859466)
+bones/13/rotation = Quaternion(-0.02761559, 0.015006572, 0.16679052, 0.9854914)
+bones/15/rotation = Quaternion(0.3019879, -0.0014198954, 0.00051181036, 0.95331067)
+bones/16/rotation = Quaternion(0.49745917, -0.0010664057, -0.071833976, 0.86450744)
+bones/17/rotation = Quaternion(0.20822291, 0.00075460854, -0.030251004, 0.9776132)
+bones/19/rotation = Quaternion(0.42840773, -0.0028351117, -0.021143252, 0.90333366)
+bones/20/rotation = Quaternion(0.53338027, 6.835443e-05, -0.07707889, 0.8423565)
+bones/21/rotation = Quaternion(0.15424496, 0.0002871059, -0.019985074, 0.98783046)
+bones/23/rotation = Quaternion(0.4951514, -0.01200951, -0.028322915, 0.8682619)
+bones/24/rotation = Quaternion(0.5823696, 0.00034409715, -0.087099396, 0.8082445)
+bones/25/rotation = Quaternion(0.2212596, -0.000305432, -0.033590574, 0.97463626)
+bones/27/rotation = Quaternion(0.5830452, -0.05273182, 0.013120887, 0.8106205)
+bones/28/rotation = Quaternion(0.52549314, -0.00043027103, -0.08210414, 0.84682685)
+bones/29/rotation = Quaternion(0.12140982, 0.00022176196, -0.019264296, 0.99241555)
+bones/31/rotation = Quaternion(0.58782774, -0.41059354, 0.55158347, 0.42617738)
+bones/32/rotation = Quaternion(0.42803016, 0.09591888, -0.48019183, 0.75960886)
+bones/33/rotation = Quaternion(0.09193047, 0.0017132724, -0.7977248, 0.5959708)
+bones/34/rotation = Quaternion(-0.1739935, 0.108675286, 0.37694323, 0.90323305)
+bones/35/rotation = Quaternion(0.3162777, -0.108576305, -0.16940959, 0.92708147)
+bones/36/rotation = Quaternion(-0.077085294, -0.17893578, 0.18400723, 0.9634217)
+bones/37/rotation = Quaternion(-0.1857678, -0.028936613, 0.37711644, 0.90688264)
+bones/39/rotation = Quaternion(0.09955781, 0.0028422112, -0.053015336, 0.99361444)
+bones/40/rotation = Quaternion(0.2824716, 0.00018244809, 0.03126277, 0.9587661)
+bones/41/rotation = Quaternion(0.25626564, -0.0005673888, 0.025582174, 0.9662677)
+bones/43/rotation = Quaternion(0.42310783, -0.013303715, 0.041220505, 0.9050434)
+bones/44/rotation = Quaternion(0.8178412, 0.00015900098, 0.08518063, 0.5691046)
+bones/45/rotation = Quaternion(0.16291112, -0.0004839509, 0.014775531, 0.98653007)
+bones/47/rotation = Quaternion(0.4704232, 0.023654798, -0.017101757, 0.8819581)
+bones/48/rotation = Quaternion(0.7595635, -0.0005814757, 0.085151196, 0.644835)
+bones/49/rotation = Quaternion(0.42380247, -0.00027402444, 0.044659674, 0.90465295)
+bones/51/rotation = Quaternion(0.52809983, 0.032003008, -0.014415031, 0.84845656)
+bones/52/rotation = Quaternion(0.6559335, 0.00014085603, 0.07731804, 0.75084835)
+bones/53/rotation = Quaternion(0.4957695, -0.0010083213, 0.05624645, 0.8666302)
+bones/55/rotation = Quaternion(0.082776785, 0.35673165, 0.9299389, -0.033228654)
+bones/56/rotation = Quaternion(-0.7878801, -0.037897807, 0.0029307262, 0.6146546)
+bones/57/rotation = Quaternion(0.6266394, -0.046441823, 0.12182144, 0.7683266)
+bones/58/rotation = Quaternion(0.30039302, -0.057255585, 0.017301947, 0.9519383)
+bones/60/rotation = Quaternion(0.053140163, 0.26690677, 0.95872283, -0.08238558)
+bones/61/rotation = Quaternion(-0.5598464, 0.010501525, -0.042447157, 0.82744175)
+bones/62/rotation = Quaternion(0.7604288, 0.1682614, -0.0639759, 0.62397385)
+bones/63/rotation = Quaternion(0.33927417, 0.060985185, -0.017948112, 0.938537)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+
+[editable path="Rifle Run(1)"]

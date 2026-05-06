@@ -1,9 +1,9 @@
 extends CharacterBody3D
 
-@export var SPEED = 8
+@export var SPEED = 5
 @export var ACCEL = 40.0
 @export var FRICTION = 30
-@export var JUMP_VELOCITY = 7
+@export var JUMP_VELOCITY = 4
 @export var MOUSE_SENSITIVITY = 0.003
 
 @export var FIRE_RATE = .1
@@ -293,9 +293,14 @@ func _physics_process(delta: float) -> void:
 	var direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	
 	if direction:
+		if(not $"Rifle Run(1)/AnimationPlayer".is_playing()): 
+			$Skeleton3D2.visible = false
+			$"Rifle Run(1)/AnimationPlayer".play("mixamo_com")
 		velocity.x = move_toward(velocity.x, -direction.x * SPEED, ACCEL * delta)
 		velocity.z = move_toward(velocity.z, -direction.z * SPEED, ACCEL * delta)
 	else:
+		$"Rifle Run(1)/AnimationPlayer".stop()
+		$Skeleton3D2.visible = true
 		velocity.x = move_toward(velocity.x, 0, FRICTION * delta)
 		velocity.z = move_toward(velocity.z, 0, FRICTION * delta)
 
